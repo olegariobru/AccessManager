@@ -143,6 +143,18 @@ export function Register() {
             onChange={form.handleChange}
             error={form.errors.group}
           />
+
+          <InputField
+            id="register-position"
+            name="position"
+            label="Cargo"
+            type="text"
+            autoComplete="position"
+            placeholder="Seu cargo na empresa"
+            value={form.values.position}
+            onChange={form.handleChange}
+            error={form.errors.position}
+          />
         </div>
 
         {message.text && (
