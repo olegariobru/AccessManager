@@ -120,7 +120,6 @@ export function Register() {
             onChange={form.handleChange}
             error={form.errors.password}
           />
-
           <InputField
             id="register-confirm"
             name="confirmPassword"
@@ -131,6 +130,18 @@ export function Register() {
             value={form.values.confirmPassword}
             onChange={form.handleChange}
             error={form.errors.confirmPassword}
+          />
+        
+          <InputField
+            id="register-group"
+            name="group"
+            label="Grupo"
+            type="text"
+            autoComplete="group"
+            placeholder="Nome do grupo"
+            value={form.values.group}
+            onChange={form.handleChange}
+            error={form.errors.group}
           />
         </div>
 
