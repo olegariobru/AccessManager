@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 const userRoutes = require("./routes/user.routes");
-app.use("/users", userRoutes);
+app.use("/auth", userRoutes);
 
 app.listen(3000, () => {
     console.log("Servidor rodando na porta 3000");

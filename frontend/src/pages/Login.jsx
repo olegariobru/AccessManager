@@ -31,7 +31,7 @@ export function Login() {
   }
 
   return (
-    <AuthCard eyebrow="Bem-vindo de volta" title="Entre na sua conta" description="Use suas credenciais para acessar o AccessManager." footerText="Ainda não tem uma conta?" footerLink="/cadastro" footerLabel="Cadastre-se">
+    <AuthCard eyebrow="Bem-vindo de volta" title="Entre na sua conta" description="Use suas credenciais para acessar o AccessManager."> {/*footerText="Ainda não tem uma conta?" footerLink="/cadastro" footerLabel="Cadastre-se" */}
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <InputField id="login-email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="voce@empresa.com" value={form.values.email} onChange={form.handleChange} error={form.errors.email} />
         <InputField id="login-password" name="password" label="Senha" type="password" autoComplete="current-password" placeholder="Sua senha" value={form.values.password} onChange={form.handleChange} error={form.errors.password} />

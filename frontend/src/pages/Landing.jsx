@@ -14,7 +14,7 @@ export function Landing() {
       <section className="hero">
         <div className="container hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow"><ShieldCheck size={16} /> Solver2.0</p>
+            <p className="eyebrow"><ShieldCheck size={16} /> SERVNET</p>
             <h1>Associação dos Serventuários <br /><span></span></h1>
             <p className="hero-note">ASJCOESP</p>
            </div>
