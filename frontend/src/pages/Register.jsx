@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { AuthCard } from "../components/AuthCard";
 import { Button } from "../components/Button";
 import { InputField } from "../components/InputField";
@@ -8,16 +7,22 @@ import { api } from "../services/api";
 import { validateEmail, validatePassword } from "../utils/validation";
 
 export function Register() {
-  const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const form = useForm(
-    { name: "", email: "", password: "", confirmPassword: "" },
+    {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "user",
+      cargo: "Colaborador",
+      grupo: "Geral"
+    },
     (values) => {
       const errors = {
-        name: values.name.trim().length < 3 ? "Informe seu nome completo." : "",
+        name: values.name.trim().length < 6 ? "Digite seu nome completo." : "",
         email: validateEmail(values.email),
         password: validatePassword(values.password),
         confirmPassword:
@@ -25,6 +30,7 @@ export function Register() {
             ? "As senhas não coincidem."
             : "",
       };
+
       return Object.fromEntries(
         Object.entries(errors).filter(([, value]) => value)
       );
@@ -44,11 +50,14 @@ export function Register() {
         name: form.values.name,
         email: form.values.email,
         password: form.values.password,
+        role: form.values.role,
+        cargo: form.values.cargo,
+        grupo: form.values.grupo
       });
 
       setMessage({
         type: "success",
-        text: "Cadastro realizado com sucesso!",
+        text: "Cadastro realizado com sucesso!"
       });
 
       form.setValues({
@@ -56,19 +65,21 @@ export function Register() {
         email: "",
         password: "",
         confirmPassword: "",
+        role: "user",
+        cargo: "Colaborador",
+        grupo: "Geral"
       });
 
-      // redireciona após 2s
       setTimeout(() => {
-        navigate("/login");
+        window.location.href = "/login";
       }, 2000);
 
     } catch (error) {
       setMessage({
         type: "error",
         text:
-          error.response?.data?.error ||
-          "Não foi possível concluir o cadastro.",
+          error.response?.data?.message ||
+          "Erro ao cadastrar usuário."
       });
     } finally {
       setLoading(false);
@@ -79,86 +90,64 @@ export function Register() {
     <AuthCard
       eyebrow="Comece agora"
       title="Crie sua conta"
-      description="Preencha os dados abaixo para acessar a plataforma."
-      footerText="Já possui uma conta?"
-      footerLink="/login"
-      footerLabel="Entrar"
+      description="Preencha os dados abaixo"
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
+
         <InputField
-          id="register-name"
           name="name"
-          label="Nome completo"
-          autoComplete="name"
-          placeholder="Seu nome"
+          label="Nome"
           value={form.values.name}
           onChange={form.handleChange}
           error={form.errors.name}
         />
 
         <InputField
-          id="register-email"
           name="email"
-          label="E-mail"
+          label="Email"
           type="email"
-          autoComplete="email"
-          placeholder="voce@empresa.com"
           value={form.values.email}
           onChange={form.handleChange}
           error={form.errors.email}
         />
 
-        <div className="form-row">
-          <InputField
-            id="register-password"
-            name="password"
-            label="Senha"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Mínimo 8 caracteres"
-            value={form.values.password}
-            onChange={form.handleChange}
-            error={form.errors.password}
-          />
-          <InputField
-            id="register-confirm"
-            name="confirmPassword"
-            label="Confirmar senha"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Repita a senha"
-            value={form.values.confirmPassword}
-            onChange={form.handleChange}
-            error={form.errors.confirmPassword}
-          />
-        
-          <InputField
-            id="register-group"
-            name="group"
-            label="Grupo"
-            type="text"
-            autoComplete="group"
-            placeholder="Nome do grupo"
-            value={form.values.group}
-            onChange={form.handleChange}
-            error={form.errors.group}
-          />
+        <InputField
+          name="password"
+          label="Senha"
+          type="password"
+          value={form.values.password}
+          onChange={form.handleChange}
+          error={form.errors.password}
+        />
 
-          <InputField
-            id="register-position"
-            name="position"
-            label="Cargo"
-            type="text"
-            autoComplete="position"
-            placeholder="Seu cargo na empresa"
-            value={form.values.position}
-            onChange={form.handleChange}
-            error={form.errors.position}
-          />
-        </div>
+        <InputField
+          name="confirmPassword"
+          label="Confirmar Senha"
+          type="password"
+          value={form.values.confirmPassword}
+          onChange={form.handleChange}
+          error={form.errors.confirmPassword}
+        />
+
+        {/* FUTURO SELECT */}
+        {/* Aqui você pode trocar por dropdown depois */}
+
+        <InputField
+          name="cargo"
+          label="Cargo"
+          value={form.values.cargo}
+          onChange={form.handleChange}
+        />
+
+        <InputField
+          name="grupo"
+          label="Grupo"
+          value={form.values.grupo}
+          onChange={form.handleChange}
+        />
 
         {message.text && (
-          <p className={`form-message ${message.type}`} role="alert">
+          <p className={`form-message ${message.type}`}>
             {message.text}
           </p>
         )}

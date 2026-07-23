@@ -24,6 +24,7 @@ export function Login() {
     try {
       const { data } = await api.post("/auth/login", form.values);
       if (data.token) localStorage.setItem("accessmanager:token", data.token);
+                      localStorage.setItem("accessmanager:user", JSON.stringify(data.user));
       navigate("/");
     } catch (error) {
       setMessage(error.response?.data?.message || "Não foi possível entrar. Verifique os dados ou tente novamente.");
