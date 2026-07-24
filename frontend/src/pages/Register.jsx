@@ -16,9 +16,8 @@ export function Register() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "user",
       cargo: "Colaborador",
-      grupo: "Geral"
+      grupo: "USUARIOS"
     },
     (values) => {
       const errors = {
@@ -50,7 +49,6 @@ export function Register() {
         name: form.values.name,
         email: form.values.email,
         password: form.values.password,
-        role: form.values.role,
         cargo: form.values.cargo,
         grupo: form.values.grupo
       });
@@ -65,9 +63,8 @@ export function Register() {
         email: "",
         password: "",
         confirmPassword: "",
-        role: "user",
         cargo: "Colaborador",
-        grupo: "Geral"
+        grupo: "USUARIOS"
       });
 
       setTimeout(() => {

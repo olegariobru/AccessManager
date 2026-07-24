@@ -1,12 +1,4 @@
-import { ArrowRight, KeyRound, LockKeyhole, ShieldCheck, UsersRound } from "lucide-react";
-import { createElement } from "react";
-import { Link } from "react-router-dom";
-
-const features = [
-  { icon: UsersRound, title: "Usuários centralizados", text: "Gerencie identidades, perfis e permissões em um só lugar." },
-  { icon: KeyRound, title: "Acessos sob controle", text: "Defina quem pode acessar cada área com regras claras." },
-  { icon: LockKeyhole, title: "Segurança por padrão", text: "Proteja sessões e credenciais com práticas modernas." },
-];
+import { ShieldCheck } from "lucide-react";
 
 export function Landing() {
   return (

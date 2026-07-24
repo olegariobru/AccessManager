@@ -19,5 +19,7 @@ model User {
   email     String   @unique
   password  String
   role      String   @default("USER")
+  cargo     String   @default("Colaborador")
+  grupo     String   @default("USUARIOS")
   createdAt DateTime @default(now())
 }

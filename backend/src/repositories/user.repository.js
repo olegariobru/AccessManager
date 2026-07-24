@@ -10,9 +10,9 @@ async function create({ name, email, password, role, cargo, grupo }) {
       name,
       email,
       password, 
-      role || "user",
+      String(role || "USER").toUpperCase(),
       cargo || "Colaborador",
-      grupo || "Geral"
+      grupo || "USUARIOS"
     ]
   );
 
@@ -29,7 +29,18 @@ async function findByEmail(email) {
   return result.rows[0];
 }
 
+async function findAll() {
+  const result = await pool.query(
+    `SELECT id, name, email, role, cargo, grupo, "createdAt"
+     FROM "User"
+     ORDER BY name ASC`
+  );
+
+  return result.rows;
+}
+
 module.exports = {
   create,
-  findByEmail
+  findByEmail,
+  findAll
 };

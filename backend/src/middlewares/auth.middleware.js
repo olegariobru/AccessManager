@@ -38,4 +38,21 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = authMiddleware;
+function authorizeRoles(...allowedRoles) {
+  const roles = allowedRoles.map((role) => String(role).toUpperCase());
+
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(String(req.user.role).toUpperCase())) {
+      return res.status(403).json({
+        error: "Acesso não autorizado para este perfil"
+      });
+    }
+
+    return next();
+  };
+}
+
+module.exports = {
+  authMiddleware,
+  authorizeRoles
+};

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearSession } from "../utils/auth";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
@@ -15,7 +16,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) localStorage.removeItem("accessmanager:token");
+    if (error.response?.status === 401) clearSession();
     return Promise.reject(error);
   },
 );
