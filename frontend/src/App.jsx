@@ -7,6 +7,7 @@ import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { UserDashboard } from "./pages/UserDashboard";
+import { CoordinatorDashboard } from "./pages/CoordinatorDashboard";
 
 export default function App() {
   return (
@@ -22,6 +23,9 @@ export default function App() {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
         <Route path="/usuario" element={<UserDashboard />} />
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={["COORDINATOR"]} />}>
+        <Route path="/coordenador" element={<CoordinatorDashboard />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

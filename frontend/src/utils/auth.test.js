@@ -18,6 +18,7 @@ test.beforeEach(() => {
 test("normaliza o perfil e escolhe a área correta", () => {
   assert.equal(normalizeRole("admin"), "ADMIN");
   assert.equal(roleDestination("ADMIN"), "/admin");
+  assert.equal(roleDestination("COORDINATOR"), "/coordenador");
   assert.equal(roleDestination("user"), "/usuario");
 });
 
@@ -36,6 +37,25 @@ test("descarta uma sessão com usuário inválido", () => {
   localStorage.setItem("accessmanager:token", "token-valido");
   localStorage.setItem("accessmanager:user", "{json-invalido");
   assert.equal(getSession(), null);
+});
+
+test("descarta uma sessão com usuário incompleto", () => {
+  localStorage.setItem("accessmanager:token", "token-valido");
+  localStorage.setItem("accessmanager:user", JSON.stringify({ id: 1 }));
+
+  assert.equal(getSession(), null);
+  assert.equal(localStorage.getItem("accessmanager:token"), null);
+});
+
+test("não salva sessão sem token, id ou perfil", () => {
+  assert.throws(
+    () => saveSession("", { id: 1, role: "USER" }),
+    /Sessão inválida/,
+  );
+  assert.throws(
+    () => saveSession("token", { role: "USER" }),
+    /Sessão inválida/,
+  );
 });
 
 test("atualiza os dados do usuário sem perder o token", () => {

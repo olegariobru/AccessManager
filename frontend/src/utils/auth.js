@@ -6,10 +6,20 @@ export function normalizeRole(role) {
 }
 
 export function roleDestination(role) {
-  return normalizeRole(role) === "ADMIN" ? "/admin" : "/usuario";
+  const destinations = {
+    ADMIN: "/admin",
+    COORDINATOR: "/coordenador",
+    USER: "/usuario",
+  };
+
+  return destinations[normalizeRole(role)] || "/usuario";
 }
 
 export function saveSession(token, user) {
+  if (!token || !user?.id || !user?.role) {
+    throw new Error("Sessão inválida");
+  }
+
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
@@ -32,7 +42,14 @@ export function getSession() {
   if (!token || !rawUser) return null;
 
   try {
-    return { token, user: JSON.parse(rawUser) };
+    const user = JSON.parse(rawUser);
+
+    if (!user || typeof user !== "object" || !user.id || !user.role) {
+      clearSession();
+      return null;
+    }
+
+    return { token, user };
   } catch {
     clearSession();
     return null;

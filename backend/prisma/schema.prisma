@@ -14,12 +14,30 @@ datasource db {
 
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("USER")
-  cargo     String   @default("Colaborador")
-  grupo     String   @default("USUARIOS")
-  createdAt DateTime @default(now())
+  id               Int               @id @default(autoincrement())
+  name             String
+  email            String            @unique
+  password         String
+  role             String            @default("USER")
+  cargo            String            @default("Colaborador")
+  grupo            String            @default("USUARIOS")
+  createdAt        DateTime          @default(now())
+  requests         EmployeeRequest[] @relation("RequestOwner")
+  reviewedRequests EmployeeRequest[] @relation("RequestReviewer")
+}
+
+model EmployeeRequest {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  type       String    @db.VarChar(20)
+  status     String    @default("PENDING") @db.VarChar(20)
+  startDate  DateTime? @db.Date
+  endDate    DateTime? @db.Date
+  notes      String?   @db.VarChar(500)
+  reviewedBy Int?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now())
+  user       User      @relation("RequestOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?     @relation("RequestReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
 }

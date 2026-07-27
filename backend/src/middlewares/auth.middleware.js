@@ -1,17 +1,5 @@
 const jwt = require("jsonwebtoken");
 
-function validateCredentials(req, res, next) {
-  const { email, password } = req.body || {};
-
-  if (!email?.trim() || !password) {
-    return res.status(400).json({
-      error: "E-mail e senha são obrigatórios"
-    });
-  }
-
-  return next();
-}
-
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -23,7 +11,7 @@ function authMiddleware(req, res, next) {
 
   const parts = authHeader.trim().split(/\s+/);
 
-  if (parts.length !== 2) {
+  if (parts.length !== 2 || !parts[1]) {
     return res.status(401).json({
       error: "Token mal formatado"
     });
@@ -31,25 +19,21 @@ function authMiddleware(req, res, next) {
 
   const [scheme, token] = parts;
 
-  if (!/^Bearer$/i.test(scheme) || !token) {
+  if (!/^Bearer$/i.test(scheme)) {
     return res.status(401).json({
       error: "Token mal formatado"
     });
   }
 
   if (!process.env.JWT_SECRET) {
-    console.error("JWT_SECRET não configurado");
-
+    console.error("JWT_SECRET não está configurado");
     return res.status(500).json({
       error: "Erro na configuração do servidor"
     });
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.user = decoded;
 
@@ -61,10 +45,24 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function validateCredentials(req, res, next) {
+  const { email, password } = req.body || {};
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return res.status(400).json({ message: "E-mail inválido" });
+  }
+
+  if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+    return res.status(400).json({ message: "A senha deve ter entre 8 e 128 caracteres" });
+  }
+
+  req.body.email = normalizedEmail;
+  return next();
+}
+
 function authorizeRoles(...allowedRoles) {
-  const roles = allowedRoles.map((role) =>
-    String(role).trim().toUpperCase()
-  );
+  const roles = allowedRoles.map((role) => String(role).trim().toUpperCase());
 
   return (req, res, next) => {
     if (!req.user) {
@@ -73,9 +71,7 @@ function authorizeRoles(...allowedRoles) {
       });
     }
 
-    const userRole = String(req.user.role || "")
-      .trim()
-      .toUpperCase();
+    const userRole = String(req.user.role || "").trim().toUpperCase();
 
     if (!roles.includes(userRole)) {
       return res.status(403).json({
@@ -88,7 +84,7 @@ function authorizeRoles(...allowedRoles) {
 }
 
 module.exports = {
-  validateCredentials,
   authMiddleware,
-  authorizeRoles
+  authorizeRoles,
+  validateCredentials
 };

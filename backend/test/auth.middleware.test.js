@@ -42,6 +42,27 @@ test("rejeita requisição sem token", () => {
   assert.equal(res.statusCode, 401);
 });
 
+test("rejeita token mal formatado", () => {
+  const req = { headers: { authorization: "Bearer token extra" } };
+  const res = createResponse();
+
+  authMiddleware(req, res, () => assert.fail("next não deve ser chamado"));
+
+  assert.equal(res.statusCode, 401);
+});
+
+test("informa erro interno quando JWT_SECRET não está configurado", () => {
+  const originalSecret = process.env.JWT_SECRET;
+  delete process.env.JWT_SECRET;
+  const req = { headers: { authorization: "Bearer token" } };
+  const res = createResponse();
+
+  authMiddleware(req, res, () => assert.fail("next não deve ser chamado"));
+  process.env.JWT_SECRET = originalSecret;
+
+  assert.equal(res.statusCode, 500);
+});
+
 test("permite ADMIN e bloqueia USER na rota administrativa", () => {
   const adminReq = { user: { role: "ADMIN" } };
   const userReq = { user: { role: "USER" } };
