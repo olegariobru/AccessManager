@@ -36,3 +36,23 @@ test("cadastro rejeita campos obrigatórios ausentes", async () => {
     /obrigatórios/,
   );
 });
+
+test("GET /me retorna o perfil atual sem a senha", async (t) => {
+  const originalFindById = userRepository.findById;
+  t.after(() => {
+    userRepository.findById = originalFindById;
+  });
+
+  userRepository.findById = async () => ({
+    id: 7,
+    name: "Bruno",
+    email: "bruno@example.com",
+    role: "user",
+    cargo: "Colaborador",
+    grupo: "USUARIOS",
+  });
+
+  const profile = await userService.getProfile(7);
+  assert.equal(profile.role, "USER");
+  assert.equal(profile.password, undefined);
+});

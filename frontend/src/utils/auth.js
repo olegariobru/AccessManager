@@ -14,6 +14,12 @@ export function saveSession(token, user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function updateSessionUser(user) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
@@ -26,10 +32,7 @@ export function getSession() {
   if (!token || !rawUser) return null;
 
   try {
-    return {
-      token,
-      user: JSON.parse(rawUser)
-    };
+    return { token, user: JSON.parse(rawUser) };
   } catch {
     clearSession();
     return null;

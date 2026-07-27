@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clearSession, getSession, normalizeRole, roleDestination, saveSession } from "./auth.js";
+import { clearSession, getSession, normalizeRole, roleDestination, saveSession, updateSessionUser } from "./auth.js";
 
 function createStorage() {
   const values = new Map();
@@ -36,4 +36,13 @@ test("descarta uma sessão com usuário inválido", () => {
   localStorage.setItem("accessmanager:token", "token-valido");
   localStorage.setItem("accessmanager:user", "{json-invalido");
   assert.equal(getSession(), null);
+});
+
+test("atualiza os dados do usuário sem perder o token", () => {
+  saveSession("token-valido", { id: 1, role: "USER" });
+  updateSessionUser({ id: 1, role: "ADMIN" });
+  assert.deepEqual(getSession(), {
+    token: "token-valido",
+    user: { id: 1, role: "ADMIN" },
+  });
 });

@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
 import { useForm } from "../hooks/useForm";
 import { api } from "../services/api";
 import { validateEmail, validatePassword } from "../utils/validation";
-
 import { AuthCard } from "../components/AuthCard";
 import { Button } from "../components/Button";
 import { InputField } from "../components/InputField";

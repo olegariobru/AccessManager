@@ -1,5 +1,17 @@
 const jwt = require("jsonwebtoken");
 
+function validateCredentials(req, res, next) {
+  const { email, password } = req.body || {};
+
+  if (!email?.trim() || !password) {
+    return res.status(400).json({
+      error: "E-mail e senha são obrigatórios"
+    });
+  }
+
+  return next();
+}
+
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -9,7 +21,7 @@ function authMiddleware(req, res, next) {
     });
   }
 
-  const parts = authHeader.split(" ");
+  const parts = authHeader.trim().split(/\s+/);
 
   if (parts.length !== 2) {
     return res.status(401).json({
@@ -19,14 +31,25 @@ function authMiddleware(req, res, next) {
 
   const [scheme, token] = parts;
 
-  if (!/^Bearer$/i.test(scheme)) {
+  if (!/^Bearer$/i.test(scheme) || !token) {
     return res.status(401).json({
       error: "Token mal formatado"
     });
   }
 
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET não configurado");
+
+    return res.status(500).json({
+      error: "Erro na configuração do servidor"
+    });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
     req.user = decoded;
 
@@ -39,10 +62,22 @@ function authMiddleware(req, res, next) {
 }
 
 function authorizeRoles(...allowedRoles) {
-  const roles = allowedRoles.map((role) => String(role).toUpperCase());
+  const roles = allowedRoles.map((role) =>
+    String(role).trim().toUpperCase()
+  );
 
   return (req, res, next) => {
-    if (!req.user || !roles.includes(String(req.user.role).toUpperCase())) {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "Usuário não autenticado"
+      });
+    }
+
+    const userRole = String(req.user.role || "")
+      .trim()
+      .toUpperCase();
+
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         error: "Acesso não autorizado para este perfil"
       });
@@ -53,6 +88,7 @@ function authorizeRoles(...allowedRoles) {
 }
 
 module.exports = {
+  validateCredentials,
   authMiddleware,
   authorizeRoles
 };
