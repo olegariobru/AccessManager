@@ -9,5 +9,6 @@ router.get("/me", authMiddleware, userController.me);
 router.get("/users", authMiddleware, authorizeRoles("ADMIN"), userController.listUsers);
 router.patch("/users/:id", authMiddleware, authorizeRoles("ADMIN"), userController.updateUser);
 router.get("/profile", authMiddleware, userController.me);
+router.delete("/users/:id", authMiddleware, authorizeRoles("ADMIN"), userController.deleteUser);
 
 module.exports = router;

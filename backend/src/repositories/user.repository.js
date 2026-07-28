@@ -66,10 +66,22 @@ async function update(id, { role, cargo, grupo }) {
   return result.rows[0] || null;
 }
 
+async function remove(id) {
+  const result = await pool.query(
+    `DELETE FROM "User"
+     WHERE id = $1
+     RETURNING id, name, email, role, cargo, grupo`,
+    [id]
+  );
+
+  return result.rows[0] || null;
+}
+
 module.exports = {
   create,
   findByEmail,
   findById,
   findAll,
-  update
+  update,
+  remove
 };

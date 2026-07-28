@@ -131,10 +131,41 @@ async function updateUser(userId, payload = {}) {
   return userRepository.update(userId, { role, cargo, grupo });
 }
 
+  async function deleteUser(userId, authenticatedUser) {
+    if (String(userId) === String(authenticatedUser.id)) {
+      const error = new Error(
+        "Não é permitido excluir o próprio usuário");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user){
+      const error = new Error("Usuário não encontrado");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    try {
+      return await userRepository.remove(userId);
+    }catch (error){
+      if (error.code === "23503") {
+        const conflictError = new Error(
+          "O usuário não possui registros relacionados e nao pode ser excluido");
+        conflictError.statusCode = 409;
+        throw conflictError;
+       }
+
+       throw error;
+        
+    }
+  }
+
 module.exports = {
   createUser,
   login,
   getUserById,
   listUsers,
-  updateUser
+  updateUser,
+  deleteUser
 };

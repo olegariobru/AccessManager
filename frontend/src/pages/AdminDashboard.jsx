@@ -18,6 +18,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function loadDashboard() {
     setLoading(true);
@@ -59,7 +60,33 @@ export function AdminDashboard() {
       setMessage(error.response?.data?.error || "Não foi possível atualizar a solicitação.");
     }
   }
+  async function deleteUser(user) {
+  const confirmed = window.confirm(
+    `Tem certeza que deseja excluir o usuário "${user.name}"?\n\nEssa ação não poderá ser desfeita.`
+  );
 
+  if (!confirmed) {
+    return;
+  }
+
+  setDeletingId(user.id);
+  setMessage("");
+
+  try {
+    await api.delete(`/auth/users/${user.id}`);
+
+    setUsers((currentUsers) =>
+      currentUsers.filter((currentUser) => currentUser.id !== user.id)
+    );
+  } catch (error) {
+    setMessage(
+      error.response?.data?.error ||
+        "Não foi possível excluir o usuário."
+    );
+  } finally {
+    setDeletingId(null);
+  }
+}
   const pending = requests.filter(({ status }) => status === "PENDING");
   const coordinators = users.filter(({ role }) => String(role).toUpperCase() === "COORDINATOR");
 
@@ -92,7 +119,27 @@ export function AdminDashboard() {
                     <td><span className={`role-badge role-${String(user.role).toLowerCase()}`}>{roleLabels[String(user.role).toUpperCase()] || user.role}</span></td>
                     <td>{user.cargo || "—"}</td>
                     <td>{user.grupo || "—"}</td>
-                    <td><button className="table-action" type="button" onClick={() => setEditing({ ...user })}>Editar</button></td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="table-action"
+                          type="button"
+                          onClick={() => setEditing({ ...user })}
+                          disabled={deletingId === user.id}
+                        >
+                          Editar
+                        </button>
+
+                        <button
+      className="table-action table-action-danger"
+      type="button"
+      onClick={() => deleteUser(user)}
+      disabled={deletingId !== null}
+    >
+      {deletingId === user.id ? "Excluindo..." : "Excluir"}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -67,10 +67,24 @@ async function updateUser(req, res) {
     }
 }
 
+async function deleteUser(req, res) {
+    try {
+        await userService.deleteUser(req.params.id, req.user.id);
+        return res.status(200).json({
+            message: "Usuário deletado com sucesso"
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 400).json({
+            error: error.message || "Erro ao deletar usuário"
+        });
+    }
+        }
+
 module.exports = {
     register,
     login,
     me,
     listUsers,
+    deleteUser,
     updateUser
 };
