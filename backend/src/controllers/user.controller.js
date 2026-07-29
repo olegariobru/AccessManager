@@ -69,7 +69,7 @@ async function updateUser(req, res) {
 
 async function deleteUser(req, res) {
     try {
-        await userService.deleteUser(req.params.id, req.user.id);
+        await userService.deleteUser(req.params.id, req.user);
         return res.status(200).json({
             message: "Usuário deletado com sucesso"
         });
@@ -80,11 +80,27 @@ async function deleteUser(req, res) {
     }
         }
 
+async function createUser(req, res) {
+    try {
+        const user = await userService.createUserByAdmin(req.body);
+        return res.status(201).json({user});
+    }catch (error){
+        console.error("Erro ao criar usuário", error);
+        
+        const status = error.statusCode || (error.code === "23505" ? 409 : 400);
+        return res.status(status).json({
+            error:
+                error.code === "23505" ? "Email já cadastrado" : error.message || "Erro ao criar usuário",
+        });
+    }    
+}
+
 module.exports = {
     register,
     login,
     me,
     listUsers,
+    createUser,
+    updateUser,
     deleteUser,
-    updateUser
 };

@@ -2,15 +2,25 @@ const { hashPassword, comparePassword } = require("../utils/hash");
 const userRepository = require("../repositories/user.repository");
 const jwt = require("jsonwebtoken");
 
-async function createUser({ name, email, password, cargo, grupo }) {
+async function createUser({
+  name,
+  email,
+  password,
+  cargo,
+  grupo,
+}) {
   if (!name?.trim() || !email?.trim() || !password) {
-    const error = new Error("Nome, e-mail e senha são obrigatórios");
+    const error = new Error(
+      "Nome, e-mail e senha são obrigatórios",
+    );
     error.statusCode = 400;
     throw error;
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const existingUser = await userRepository.findByEmail(normalizedEmail);
+
+  const existingUser =
+    await userRepository.findByEmail(normalizedEmail);
 
   if (existingUser) {
     const error = new Error("E-mail já cadastrado");
@@ -20,13 +30,91 @@ async function createUser({ name, email, password, cargo, grupo }) {
 
   const hashedPassword = await hashPassword(password);
 
-  return await userRepository.create({
+  return userRepository.create({
     name: name.trim(),
     email: normalizedEmail,
     password: hashedPassword,
     role: "USER",
-    cargo: cargo || "Colaborador",
-    grupo: grupo || "USUARIOS"
+    cargo: cargo?.trim() || "Colaborador",
+    grupo: grupo?.trim().toUpperCase() || "USUARIOS",
+  });
+}
+
+async function createUserByAdmin(payload = {}) {
+  const name = String(payload.name || "").trim();
+
+  const email = String(payload.email || "")
+    .trim()
+    .toLowerCase();
+
+  const password = String(payload.password || "");
+
+  const role = String(payload.role || "")
+    .trim()
+    .toUpperCase();
+
+  const cargo = String(payload.cargo || "")
+    .trim()
+    .slice(0, 100);
+
+  const grupo = String(payload.grupo || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 100);
+
+  if (
+    !name ||
+    !email ||
+    !password ||
+    !role ||
+    !cargo ||
+    !grupo
+  ) {
+    const error = new Error(
+      "Nome, e-mail, senha, perfil, cargo e grupo são obrigatórios",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (password.length < 8 || password.length > 128) {
+    const error = new Error(
+      "A senha deve ter entre 8 e 128 caracteres",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const allowedRoles = [
+    "USER",
+    "COORDINATOR",
+    "ADMIN",
+  ];
+
+  if (!allowedRoles.includes(role)) {
+    const error = new Error("Perfil inválido");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingUser =
+    await userRepository.findByEmail(email);
+
+  if (existingUser) {
+    const error = new Error("E-mail já cadastrado");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  return userRepository.create({
+    name,
+    email,
+    password: hashedPassword,
+    role,
+    cargo,
+    grupo,
   });
 }
 
@@ -163,6 +251,7 @@ async function updateUser(userId, payload = {}) {
 
 module.exports = {
   createUser,
+  createUserByAdmin,
   login,
   getUserById,
   listUsers,

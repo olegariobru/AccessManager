@@ -5,6 +5,7 @@ const { authMiddleware, authorizeRoles, validateCredentials } = require("../midd
 
 router.post("/register", validateCredentials, userController.register);
 router.post("/login", validateCredentials, userController.login);
+router.post("/users", authMiddleware, authorizeRoles("ADMIN"), userController.createUser);
 router.get("/me", authMiddleware, userController.me);
 router.get("/users", authMiddleware, authorizeRoles("ADMIN"), userController.listUsers);
 router.patch("/users/:id", authMiddleware, authorizeRoles("ADMIN"), userController.updateUser);
