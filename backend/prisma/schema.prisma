@@ -1,32 +1,247 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
+enum RoleCode {
+  USER
+  COORDINATOR
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum RequestStatus {
+  PENDING
+  PENDING_HR
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PayslipStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
 
 model User {
-  id               Int               @id @default(autoincrement())
-  name             String
-  email            String            @unique
-  password         String
-  role             String            @default("USER")
-  cargo            String            @default("Colaborador")
-  grupo            String            @default("USUARIOS")
-  createdAt        DateTime          @default(now())
-  requests         EmployeeRequest[] @relation("RequestOwner")
-  reviewedRequests EmployeeRequest[] @relation("RequestReviewer")
+  id                     Int                     @id @default(autoincrement())
+  name                   String
+  email                  String                  @unique
+  passwordHash           String                  @map("password")
+  status                 UserStatus              @default(ACTIVE)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @default(now()) @updatedAt
+  deletedAt              DateTime?
+  roles                  UserRole[]
+  memberships            UserMembership[]
+  coordinatedGroups      GroupCoordinator[]
+  vacationRequests       VacationRequest[]       @relation("VacationOwner")
+  reviewedVacations      VacationRequest[]       @relation("VacationReviewer")
+  scheduledVacations     VacationRequest[]       @relation("VacationScheduler")
+  vacationChanges        VacationStatusHistory[] @relation("VacationStatusActor")
+  payslips               Payslip[]               @relation("PayslipOwner")
+  publishedPayslips      Payslip[]               @relation("PayslipPublisher")
+  auditLogs              AuditLog[]              @relation("AuditActor")
+  legacyRequests         LegacyEmployeeRequest[] @relation("LegacyRequestOwner")
+  legacyReviews          LegacyEmployeeRequest[] @relation("LegacyRequestReviewer")
+  mustChangePassword     Boolean                 @default(false)
+  tokenVersion           Int                     @default(0)
+  passwordResetRequests  PasswordResetRequest[]  @relation("PasswordResetOwner")
+  reviewedPasswordResets PasswordResetRequest[]  @relation("PasswordResetReviewer")
+
+  @@index([status])
+  @@map("User")
 }
 
-model EmployeeRequest {
+model Role {
+  id          Int        @id @default(autoincrement())
+  code        RoleCode   @unique
+  description String?    @db.VarChar(255)
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId     Int
+  roleId     Int
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model Group {
+  id           Int                @id @default(autoincrement())
+  name         String             @unique @db.VarChar(100)
+  slug         String             @unique @db.VarChar(100)
+  description  String?            @db.VarChar(500)
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @default(now()) @updatedAt
+  memberships  UserMembership[]
+  coordinators GroupCoordinator[]
+  vacations    VacationRequest[]
+
+  @@index([isActive])
+  @@map("groups")
+}
+
+model Position {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique @db.VarChar(100)
+  description String?          @db.VarChar(500)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+  memberships UserMembership[]
+
+  @@index([isActive])
+  @@map("positions")
+}
+
+model UserMembership {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  groupId    Int
+  positionId Int
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime?
+  isPrimary  Boolean   @default(true)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  group      Group     @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  position   Position  @relation(fields: [positionId], references: [id], onDelete: Restrict)
+
+  @@index([userId, endsAt])
+  @@index([groupId, endsAt])
+  @@index([positionId])
+  @@map("user_memberships")
+}
+
+model GroupCoordinator {
+  userId     Int
+  groupId    Int
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Restrict)
+
+  @@id([userId, groupId])
+  @@index([groupId])
+  @@map("group_coordinators")
+}
+
+model VacationRequest {
+  id            Int                     @id @default(autoincrement())
+  userId        Int
+  groupId       Int
+  startDate     DateTime                @db.Date
+  endDate       DateTime                @db.Date
+  days          Int
+  status        RequestStatus           @default(PENDING)
+  notes         String?                 @db.VarChar(500)
+  reviewedById  Int?
+  reviewedAt    DateTime?
+  scheduledById Int?
+  scheduledAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @default(now()) @updatedAt
+  user          User                    @relation("VacationOwner", fields: [userId], references: [id], onDelete: Restrict)
+  group         Group                   @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  reviewer      User?                   @relation("VacationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  scheduler     User?                   @relation("VacationScheduler", fields: [scheduledById], references: [id], onDelete: SetNull)
+  history       VacationStatusHistory[]
+
+  @@index([userId, status])
+  @@index([groupId, status, createdAt])
+  @@index([startDate, endDate])
+  @@index([scheduledById])
+  @@map("vacation_requests")
+}
+
+model VacationStatusHistory {
+  id          BigInt          @id @default(autoincrement())
+  requestId   Int
+  fromStatus  RequestStatus?
+  toStatus    RequestStatus
+  changedById Int?
+  reason      String?         @db.VarChar(500)
+  createdAt   DateTime        @default(now())
+  request     VacationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  changedBy   User?           @relation("VacationStatusActor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+  @@map("vacation_status_history")
+}
+
+model FileAsset {
+  id           String   @id @default(uuid()) @db.Uuid
+  storageKey   String   @unique @db.VarChar(500)
+  originalName String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  sizeBytes    BigInt
+  checksum     String?  @db.VarChar(128)
+  createdAt    DateTime @default(now())
+  payslip      Payslip?
+
+  @@map("file_assets")
+}
+
+model Payslip {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  year          Int
+  month         Int
+  grossAmount   Decimal?      @db.Decimal(12, 2)
+  netAmount     Decimal?      @db.Decimal(12, 2)
+  status        PayslipStatus @default(DRAFT)
+  fileId        String?       @unique @db.Uuid
+  publishedById Int?
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
+  user          User          @relation("PayslipOwner", fields: [userId], references: [id], onDelete: Restrict)
+  publisher     User?         @relation("PayslipPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  file          FileAsset?    @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, year, month])
+  @@index([year, month, status])
+  @@index([userId, status])
+  @@map("payslips")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorId    Int?
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   String?  @db.VarChar(100)
+  changes    Json?
+  requestId  String?  @db.VarChar(100)
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+// Modelo de compatibilidade com a tabela anterior à normalização.
+// Novas gravações devem usar VacationRequest e Payslip.
+model LegacyEmployeeRequest {
   id         Int       @id @default(autoincrement())
   userId     Int
   type       String    @db.VarChar(20)
@@ -38,6 +253,35 @@ model EmployeeRequest {
   reviewedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @default(now())
-  user       User      @relation("RequestOwner", fields: [userId], references: [id], onDelete: Cascade)
-  reviewer   User?     @relation("RequestReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  user       User      @relation("LegacyRequestOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?     @relation("LegacyRequestReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@map("EmployeeRequest")
+}
+
+enum PasswordResetStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+  EXPIRED
+}
+
+model PasswordResetRequest {
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             Int
+  status             PasswordResetStatus @default(PENDING)
+  requestedAt        DateTime            @default(now())
+  expiresAt          DateTime
+  reviewedById       Int?
+  reviewedAt         DateTime?
+  completedAt        DateTime?
+  requesterIp        String?             @db.VarChar(100)
+  notificationSentAt DateTime?
+
+  user     User  @relation("PasswordResetOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("PasswordResetReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, requestedAt])
+  @@map("password_reset_requests")
 }

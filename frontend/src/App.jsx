@@ -8,6 +8,8 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { UserDashboard } from "./pages/UserDashboard";
 import { CoordinatorDashboard } from "./pages/CoordinatorDashboard";
+import { HrDashboard } from "./pages/HrDashboard";
+import { ChangePassword } from "./pages/ChangePassword";
 
 export default function App() {
   return (
@@ -21,10 +23,14 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
         <Route path="/admin" element={<AdminDashboard />} />
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["USER", "COORDINATOR", "ADMIN"]} />}>
         <Route path="/usuario" element={<UserDashboard />} />
+        <Route path="/alterar-senha" element={<ChangePassword />} />
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={["COORDINATOR"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["USER", "COORDINATOR", "ADMIN"]} requireHr />}>
+        <Route path="/rh" element={<HrDashboard />} />
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={["COORDINATOR", "ADMIN"]} />}>
         <Route path="/coordenador" element={<CoordinatorDashboard />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

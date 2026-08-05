@@ -1,253 +1,163 @@
+const jwt = require("jsonwebtoken");
 const { hashPassword, comparePassword } = require("../utils/hash");
 const userRepository = require("../repositories/user.repository");
-const jwt = require("jsonwebtoken");
+const securityRepository = require("../repositories/security.repository");
 
-async function createUser({
-  name,
-  email,
-  password,
-  cargo,
-  grupo,
-}) {
-  if (!name?.trim() || !email?.trim() || !password) {
-    const error = new Error(
-      "Nome, e-mail e senha são obrigatórios",
-    );
-    error.statusCode = 400;
-    throw error;
-  }
+const ALLOWED_ROLES = ["USER", "COORDINATOR", "ADMIN"];
 
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const existingUser =
-    await userRepository.findByEmail(normalizedEmail);
-
-  if (existingUser) {
-    const error = new Error("E-mail já cadastrado");
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const hashedPassword = await hashPassword(password);
-
-  return userRepository.create({
-    name: name.trim(),
-    email: normalizedEmail,
-    password: hashedPassword,
-    role: "USER",
-    cargo: cargo?.trim() || "Colaborador",
-    grupo: grupo?.trim().toUpperCase() || "USUARIOS",
-  });
+function httpError(message, statusCode, code) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
 }
 
-async function createUserByAdmin(payload = {}) {
-  const name = String(payload.name || "").trim();
+function normalizeCreatePayload(payload = {}, roleCode = "USER") {
+  const normalized = {
+    name: String(payload.name || "").trim(),
+    email: String(payload.email || "").trim().toLowerCase(),
+    password: String(payload.password || ""),
+    roleCode: String(roleCode || payload.roleCode || payload.role || "USER").trim().toUpperCase(),
+    groupId: Number(payload.groupId),
+    positionId: Number(payload.positionId),
+  };
 
-  const email = String(payload.email || "")
-    .trim()
-    .toLowerCase();
+  if (!normalized.name || !normalized.email || !normalized.password) {
+    throw httpError("Nome, e-mail e senha são obrigatórios", 400, "REQUIRED_FIELDS");
+  }
+  if (normalized.password.length < 8 || normalized.password.length > 128) {
+    throw httpError("A senha deve ter entre 8 e 128 caracteres", 400, "INVALID_PASSWORD");
+  }
+  if (!ALLOWED_ROLES.includes(normalized.roleCode)) {
+    throw httpError("Perfil inválido", 400, "INVALID_ROLE");
+  }
+  if (!Number.isInteger(normalized.groupId) || !Number.isInteger(normalized.positionId)) {
+    throw httpError("Grupo e cargo válidos são obrigatórios", 400, "INVALID_ORGANIZATION");
+  }
+  return normalized;
+}
 
-  const password = String(payload.password || "");
+async function createUser(payload = {}) {
+  const data = normalizeCreatePayload(payload, "USER");
+  return createNormalizedUser(data);
+}
 
-  const role = String(payload.role || "")
-    .trim()
-    .toUpperCase();
+async function createUserByAdmin(payload = {}, actor) {
+  const data = normalizeCreatePayload(payload, payload.roleCode || payload.role);
+  const user = await createNormalizedUser(data);
+  await securityRepository.audit({
+    actorId: actor.id,
+    action: "USER_CREATED",
+    entityType: "User",
+    entityId: user.id,
+    changes: {
+      roleCode: data.roleCode,
+      groupId: data.groupId,
+      positionId: data.positionId,
+    },
+  });
+  return user;
+}
 
-  const cargo = String(payload.cargo || "")
-    .trim()
-    .slice(0, 100);
-
-  const grupo = String(payload.grupo || "")
-    .trim()
-    .toUpperCase()
-    .slice(0, 100);
-
-  if (
-    !name ||
-    !email ||
-    !password ||
-    !role ||
-    !cargo ||
-    !grupo
-  ) {
-    const error = new Error(
-      "Nome, e-mail, senha, perfil, cargo e grupo são obrigatórios",
-    );
-    error.statusCode = 400;
-    throw error;
+async function createNormalizedUser(data) {
+  const existing = await userRepository.findByEmail(data.email);
+  if (existing) {
+    throw httpError("E-mail já cadastrado", 409, "EMAIL_ALREADY_EXISTS");
   }
 
-  if (password.length < 8 || password.length > 128) {
-    const error = new Error(
-      "A senha deve ter entre 8 e 128 caracteres",
-    );
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const allowedRoles = [
-    "USER",
-    "COORDINATOR",
-    "ADMIN",
-  ];
-
-  if (!allowedRoles.includes(role)) {
-    const error = new Error("Perfil inválido");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const existingUser =
-    await userRepository.findByEmail(email);
-
-  if (existingUser) {
-    const error = new Error("E-mail já cadastrado");
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const hashedPassword = await hashPassword(password);
-
-  return userRepository.create({
-    name,
-    email,
-    password: hashedPassword,
-    role,
-    cargo,
-    grupo,
+  return userRepository.createWithAccess({
+    name: data.name,
+    email: data.email,
+    passwordHash: await hashPassword(data.password),
+    roleCodes: [data.roleCode],
+    groupId: data.groupId,
+    positionId: data.positionId,
   });
 }
 
 async function login({ email, password }) {
-  if (!email?.trim() || !password) {
-    const error = new Error("E-mail e senha são obrigatórios");
-    error.statusCode = 400;
-    throw error;
-  }
-
   if (!process.env.JWT_SECRET) {
-    const error = new Error("Erro na configuração do servidor");
-    error.statusCode = 500;
-    throw error;
+    throw httpError("Erro na configuração do servidor", 500, "SERVER_MISCONFIGURED");
+  }
+  const storedUser = await userRepository.findByEmail(String(email || "").trim().toLowerCase());
+  const valid = storedUser && await comparePassword(password, storedUser.passwordHash);
+  if (!valid || storedUser.status !== "ACTIVE" || storedUser.deletedAt) {
+    throw httpError("E-mail ou senha inválidos", 401, "INVALID_CREDENTIALS");
   }
 
-  const user = await userRepository.findByEmail(email.trim().toLowerCase());
-
-  if (!user) {
-    const error = new Error("E-mail ou senha inválidos");
-    error.statusCode = 401;
-    throw error;
-  }
-
-  const isValid = await comparePassword(password, user.password);
-
-  if (!isValid) {
-    const error = new Error("E-mail ou senha inválidos");
-    error.statusCode = 401;
-    throw error;
-  }
-
+  const user = userRepository.toPublicUser(storedUser);
   const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: String(user.role || "USER").toUpperCase(),
-      cargo: user.cargo,
-      grupo: user.grupo
-    },
+    { id: user.id, tokenVersion: user.tokenVersion },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "1d", algorithm: "HS256" },
   );
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: String(user.role || "USER").toUpperCase(),
-      cargo: user.cargo,
-      grupo: user.grupo
-    }
-  };
+  return { token, user };
 }
 
 async function getUserById(userId) {
   const user = await userRepository.findById(userId);
-
-  if (!user) {
-    const error = new Error("Usuário não encontrado");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  return {
-    ...user,
-    role: String(user.role || "USER").toUpperCase()
-  };
+  if (!user) throw httpError("Usuário não encontrado", 404, "USER_NOT_FOUND");
+  return user;
 }
 
 async function listUsers() {
   return userRepository.findAll();
 }
 
-async function updateUser(userId, payload = {}) {
-  const currentUser = await userRepository.findById(userId);
-  if (!currentUser) {
-    const error = new Error("Usuário não encontrado");
-    error.statusCode = 404;
-    throw error;
+async function updateUser(userId, payload, actor) {
+  const roleCode = String(payload.roleCode || payload.role || "").trim().toUpperCase();
+  const groupId = Number(payload.groupId);
+  const positionId = Number(payload.positionId);
+  if (!ALLOWED_ROLES.includes(roleCode)
+    || !Number.isInteger(groupId)
+    || !Number.isInteger(positionId)) {
+    throw httpError("Perfil, grupo ou cargo inválido", 400, "INVALID_ORGANIZATION");
   }
 
-  const role = String(payload.role || currentUser.role).trim().toUpperCase();
-  if (!["USER", "COORDINATOR", "ADMIN"].includes(role)) {
-    const error = new Error("Perfil inválido");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const cargo = String(payload.cargo || currentUser.cargo || "Colaborador").trim().slice(0, 100);
-  const grupo = String(payload.grupo || currentUser.grupo || "USUARIOS").trim().toUpperCase().slice(0, 100);
-
-  if (!cargo || !grupo) {
-    const error = new Error("Cargo e grupo são obrigatórios");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  return userRepository.update(userId, { role, cargo, grupo });
+  const current = await userRepository.findById(userId);
+  if (!current) throw httpError("Usuário não encontrado", 404, "USER_NOT_FOUND");
+  const user = await userRepository.updateAccess(userId, { roleCode, groupId, positionId });
+  await securityRepository.audit({
+    actorId: actor.id,
+    action: "USER_ACCESS_UPDATED",
+    entityType: "User",
+    entityId: userId,
+    changes: {
+      before: {
+        role: current.role,
+        groupId: current.group?.id,
+        positionId: current.position?.id,
+      },
+      after: { roleCode, groupId, positionId },
+    },
+  });
+  return user;
 }
 
-  async function deleteUser(userId, authenticatedUser) {
-    if (String(userId) === String(authenticatedUser.id)) {
-      const error = new Error(
-        "Não é permitido excluir o próprio usuário");
-      error.statusCode = 403;
-      throw error;
-    }
-
-    const user = await userRepository.findById(userId);
-    if (!user){
-      const error = new Error("Usuário não encontrado");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    try {
-      return await userRepository.remove(userId);
-    }catch (error){
-      if (error.code === "23503") {
-        const conflictError = new Error(
-          "O usuário não possui registros relacionados e nao pode ser excluido");
-        conflictError.statusCode = 409;
-        throw conflictError;
-       }
-
-       throw error;
-        
-    }
+async function deleteUser(userId, authenticatedUser) {
+  if (String(userId) === String(authenticatedUser.id)) {
+    throw httpError("Não é permitido inativar o próprio usuário", 403, "SELF_DEACTIVATION_DENIED");
   }
+  const current = await userRepository.findById(userId);
+  if (!current) throw httpError("Usuário não encontrado", 404, "USER_NOT_FOUND");
+  const user = await userRepository.deactivate(userId);
+  await securityRepository.audit({
+    actorId: authenticatedUser.id,
+    action: "USER_DEACTIVATED",
+    entityType: "User",
+    entityId: userId,
+  });
+  return user;
+}
+
+async function changeOwnPassword(user, payload = {}) {
+  const password = String(payload.password || "");
+  if (password.length < 12 || password.length > 128) {
+    throw httpError("A nova senha deve ter entre 12 e 128 caracteres", 400, "INVALID_PASSWORD");
+  }
+  await userRepository.changePassword(user.id, await hashPassword(password));
+  await securityRepository.audit({ actorId: user.id, action: "PASSWORD_CHANGED", entityType: "User", entityId: user.id });
+}
 
 module.exports = {
   createUser,
@@ -256,5 +166,6 @@ module.exports = {
   getUserById,
   listUsers,
   updateUser,
-  deleteUser
+  deleteUser,
+  changeOwnPassword,
 };

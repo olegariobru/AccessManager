@@ -1,8 +1,19 @@
 require("dotenv").config();
 
-const app = require ("./app");
-const PORT = process.env.PORT || 3000;
+const app = require("./app");
+const prisma = require("./config/prisma");
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+const port = Number(process.env.PORT || 3000);
+
+async function start() {
+  await prisma.$connect();
+  app.listen(port, () => {
+    console.log(`Servidor rodando na porta ${port}`);
+  });
+}
+
+start().catch(async (error) => {
+  console.error("Falha ao iniciar o servidor", error);
+  await prisma.$disconnect();
+  process.exitCode = 1;
 });

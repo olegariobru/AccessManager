@@ -20,6 +20,14 @@ test("normaliza o perfil e escolhe a área correta", () => {
   assert.equal(roleDestination("ADMIN"), "/admin");
   assert.equal(roleDestination("COORDINATOR"), "/coordenador");
   assert.equal(roleDestination("user"), "/usuario");
+  assert.equal(roleDestination({ role: "USER", isHr: true }), "/rh");
+  assert.equal(roleDestination({ role: "USER", isHr: false }), "/usuario");
+  assert.equal(roleDestination({ role: "COORDINATOR", isHr: true }), "/rh");
+  assert.equal(roleDestination({ role: "COORDINATOR", isHr: false }), "/coordenador");
+});
+
+test("direciona senha temporária para troca obrigatória", () => {
+  assert.equal(roleDestination({ role: "ADMIN", mustChangePassword: true }), "/alterar-senha");
 });
 
 test("salva, recupera e encerra a sessão", () => {
