@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Clock3, KeyRound, RefreshCw, ShieldCheck, Users, X } from "lucide-react";
+import { Check, Clock3, KeyRound, RefreshCw, Search, ShieldCheck, Users, X } from "lucide-react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/Button";
 import { api } from "../services/api";
@@ -22,6 +22,8 @@ export function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [passwordRequests, setPasswordRequests] = useState([]);
   const [resetting, setResetting] = useState(null);
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   async function loadDashboard() {
     setLoading(true);
@@ -34,6 +36,7 @@ export function AdminDashboard() {
         api.get("/auth/password-reset-requests"),
       ]);
       setUsers(usersResponse.data.users || []);
+      setAppliedSearch("");
       setRequests(requestsResponse.data.requests || []);
       setOptions(optionsResponse.data);
       setPasswordRequests(passwordResponse.data.requests || []);
@@ -47,6 +50,24 @@ export function AdminDashboard() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  async function searchUsers(event) {
+    event.preventDefault();
+    const normalizedSearch = search.trim();
+    setLoading(true);
+    setMessage("");
+    try {
+      const response = await api.get("/auth/users", {
+        params: normalizedSearch ? { search: normalizedSearch } : {},
+      });
+      setUsers(response.data.users || []);
+      setAppliedSearch(normalizedSearch);
+    } catch (error) {
+      setMessage(apiErrorMessage(error, "Não foi possível pesquisar os usuários."));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function accessForm(user = {}) {
     return {
@@ -155,6 +176,18 @@ export function AdminDashboard() {
         <div className="panel-heading">
           <div><span><Users size={18} /> Gestão de usuários</span><strong>{users.length}</strong></div>
           <div className="toolbar-actions">
+            <form className="user-search" role="search" onSubmit={searchUsers}>
+              <Search size={16} aria-hidden="true" />
+              <input
+                aria-label="Pesquisar usuários por nome ou e-mail"
+                maxLength={100}
+                placeholder="Nome ou e-mail"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <Button className="button-secondary button-small" type="submit" loading={loading}>Pesquisar</Button>
+            </form>
             <Button className="button-primary button-small" type="button" onClick={() => setCreating(accessForm())}>
               Adicionar usuário
             </Button>
@@ -165,7 +198,9 @@ export function AdminDashboard() {
         </div>
         {!loading && (
           <div className="users-table-wrap">
-            <table className="users-table">
+            {users.length === 0 ? (
+              <p className="empty-state">{appliedSearch ? `Nenhum usuário encontrado para "${appliedSearch}".` : "Nenhum usuário ativo."}</p>
+            ) : <table className="users-table">
               <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cargo</th><th>Grupo</th><th>Ações</th></tr></thead>
               <tbody>
                 {users.map((user) => (
@@ -183,7 +218,7 @@ export function AdminDashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table>}
           </div>
         )}
       </section>

@@ -224,15 +224,18 @@ model Payslip {
 }
 
 model AuditLog {
-  id         BigInt   @id @default(autoincrement())
-  actorId    Int?
-  action     String   @db.VarChar(100)
-  entityType String   @db.VarChar(100)
-  entityId   String?  @db.VarChar(100)
-  changes    Json?
-  requestId  String?  @db.VarChar(100)
-  createdAt  DateTime @default(now())
-  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id          BigInt   @id @default(autoincrement())
+  actorId     Int?
+  actorName   String   @db.VarChar(150)
+  actorEmail  String?  @db.VarChar(255)
+  action      String   @db.VarChar(100)
+  description String   @db.VarChar(255)
+  entityType  String   @db.VarChar(100)
+  entityId    String?  @db.VarChar(100)
+  changes     Json?
+  requestId   String?  @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])

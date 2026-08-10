@@ -39,7 +39,9 @@ async function createRequest(user, payload = {}) {
     throw httpError("Período de férias inválido", 400, "INVALID_VACATION_PERIOD");
   }
   const days = daysInclusive(startDate, endDate);
-  const initialStatus = user.role === "COORDINATOR" ? "PENDING_HR" : "PENDING";
+  const initialStatus = ["COORDINATOR", "ADMIN"].includes(user.role)
+    ? "PENDING_HR"
+    : "PENDING";
   const request = await requestRepository.createVacation({
     userId: user.id,
     startDate,
@@ -88,8 +90,8 @@ async function reviewRequest(user, requestId, payload = {}) {
   }
   const request = await requestRepository.findById(requestId);
   if (!request) throw httpError("Solicitação não encontrada", 404, "REQUEST_NOT_FOUND");
-  if (user.role === "COORDINATOR" && Number(request.userId) === Number(user.id)) {
-    throw httpError("Coordenadores não podem analisar as próprias férias", 403, "SELF_REVIEW_DENIED");
+  if (Number(request.userId) === Number(user.id)) {
+    throw httpError("Não é permitido analisar as próprias férias", 403, "SELF_REVIEW_DENIED");
   }
   if (user.role === "COORDINATOR" && !user.groupIds.includes(request.groupId)) {
     throw httpError("Esta solicitação pertence a outro grupo", 403, "CROSS_GROUP_ACCESS_DENIED");

@@ -107,6 +107,11 @@ h1,h2,h3 { font-family: "Manrope",sans-serif; }
 .status-pending { color:#f7d28c; background:rgba(220,153,43,.13); }.status-approved { color:#9ce7bd; background:rgba(48,166,102,.13); }.status-rejected { color:#ffadb9; background:rgba(203,60,82,.13); }
 .status-cancelled,.status-archived { color:#bbb5c6; background:rgba(130,125,140,.14); }.status-published { color:#9ce7bd; background:rgba(48,166,102,.13); }.status-draft { color:#f7d28c; background:rgba(220,153,43,.13); }
 .toolbar-actions,.table-actions { display:flex; gap:8px; align-items:center; }.table-action-danger { color:#ffadb9; border-color:rgba(203,60,82,.28); }
+.user-search { display:flex; align-items:center; gap:8px; padding-left:11px; color:var(--muted); background:#0c0b14; border:1px solid #2b2837; border-radius:10px; }
+.user-search:focus-within { border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.12); }
+.user-search input { width:180px; height:36px; padding:0; color:white; background:transparent; border:0; outline:0; }
+.user-search input::placeholder { color:#716c7d; }
+@media (max-width: 900px) { .panel-heading,.toolbar-actions { align-items:stretch; flex-direction:column; }.user-search input { width:100%; }.user-search { width:100%; } }
 .review-actions { display:flex; gap:7px; }.icon-button { width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--line); border-radius:9px; cursor:pointer; background:rgba(255,255,255,.035); }.icon-button.approve { color:#8fe0b2; }.icon-button.reject { color:#f493a3; }.icon-button:hover { background:rgba(255,255,255,.08); }
 .empty-state { padding:25px 0; color:var(--muted); text-align:center; }.table-action { padding:7px 11px; color:#cdbfff; background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.2); border-radius:8px; cursor:pointer; }
 .table-action-key { display:inline-flex; align-items:center; gap:5px; color:#d9ceff; }.request-password { display:inline-flex; align-items:center; gap:5px; color:#d7caff; background:rgba(139,92,246,.13); }.password-reset-button { white-space:nowrap; }

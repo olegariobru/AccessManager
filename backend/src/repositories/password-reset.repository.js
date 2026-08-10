@@ -1,4 +1,5 @@
 const prisma = require("../config/prisma");
+const securityRepository = require("./security.repository");
 
 function findPendingByUserId(userId) {
   return prisma.passwordResetRequest.findFirst({
@@ -61,9 +62,13 @@ function resetPasswordByAdmin({ userId, requestId, passwordHash, administratorId
       where: { userId: user.id, status: "PENDING", ...(requestId ? { id: { not: requestId } } : {}) },
       data: { status: "REJECTED", reviewedById: administratorId, reviewedAt: completedAt },
     });
-    await tx.auditLog.create({
-      data: { actorId: administratorId, action: "PASSWORD_RESET_BY_ADMIN", entityType: "User", entityId: String(user.id), changes: { requestId: requestId || null, sessionsInvalidated: true } },
-    });
+    await securityRepository.audit({
+      actorId: administratorId,
+      action: "PASSWORD_RESET_BY_ADMIN",
+      entityType: "User",
+      entityId: user.id,
+      changes: { requestId: requestId || null, sessionsInvalidated: true },
+    }, tx);
     return user;
   });
 }

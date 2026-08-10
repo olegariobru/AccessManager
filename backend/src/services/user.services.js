@@ -85,7 +85,7 @@ async function login({ email, password }) {
     throw httpError("E-mail ou senha inválidos", 401, "INVALID_CREDENTIALS");
   }
 
-  const user = userRepository.toPublicUser(storedUser);
+  const user = await userRepository.withMasterGroupScope(userRepository.toPublicUser(storedUser));
   const token = jwt.sign(
     { id: user.id, tokenVersion: user.tokenVersion },
     process.env.JWT_SECRET,
@@ -100,8 +100,12 @@ async function getUserById(userId) {
   return user;
 }
 
-async function listUsers() {
-  return userRepository.findAll();
+async function listUsers(search) {
+  const normalizedSearch = String(search || "").trim();
+  if (normalizedSearch.length > 100) {
+    throw httpError("A pesquisa deve ter no máximo 100 caracteres", 400, "INVALID_SEARCH");
+  }
+  return userRepository.findAll(normalizedSearch);
 }
 
 async function updateUser(userId, payload, actor) {

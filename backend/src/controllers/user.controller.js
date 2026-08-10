@@ -53,9 +53,9 @@ async function changePassword(req, res) {
   } catch (error) { return sendError(res, error, "Erro ao alterar senha"); }
 }
 
-async function listUsers(_req, res) {
+async function listUsers(req, res) {
   try {
-    return res.status(200).json({ users: await userService.listUsers() });
+    return res.status(200).json({ users: await userService.listUsers(req.query.search) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar usuários");
   }

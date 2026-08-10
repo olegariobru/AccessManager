@@ -38,12 +38,29 @@ function toPublicUser(user) {
     ...identity,
     role: primaryRole(roleCodes),
     roles: roleCodes,
+    isMaster: roleCodes.includes("ADMIN"),
     group: membership?.group || null,
     position: membership?.position || null,
     isHr,
     groupIds: managedGroups.map(({ groupId }) => groupId),
+    accessibleGroups: managedGroups.map(({ group }) => group),
     grupo: membership?.group?.name || null,
     cargo: membership?.position?.name || null,
+  };
+}
+
+async function withMasterGroupScope(user, database = prisma) {
+  if (!user || user.role !== "ADMIN") return user;
+  const groups = await database.group.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, slug: true },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+  return {
+    ...user,
+    isMaster: true,
+    groupIds: groups.map(({ id }) => id),
+    accessibleGroups: groups,
   };
 }
 
@@ -59,7 +76,7 @@ async function findById(id) {
     where: { id: Number(id), deletedAt: null },
     include: accessInclude,
   });
-  return toPublicUser(user);
+  return withMasterGroupScope(toPublicUser(user));
 }
 
 async function getAccessContext(id) {
@@ -68,7 +85,7 @@ async function getAccessContext(id) {
     include: accessInclude,
   });
   if (!user?.roles?.length) return null;
-  return toPublicUser(user);
+  return withMasterGroupScope(toPublicUser(user));
 }
 
 async function assertOrganization(tx, groupId, positionId, roleCodes) {
@@ -118,16 +135,22 @@ async function createWithAccess({
       await tx.groupCoordinator.create({ data: { userId: user.id, groupId } });
       user.coordinatedGroups = [{ userId: user.id, groupId, group: user.memberships[0].group }];
     }
-    return toPublicUser(user);
+    return withMasterGroupScope(toPublicUser(user), tx);
   };
 
   return transaction === prisma ? prisma.$transaction(operation) : operation(transaction);
 }
 
-async function findAll() {
+async function findAll(search = "") {
   const where = {
     deletedAt: null,
     status: "ACTIVE",
+    ...(search ? {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ],
+    } : {}),
   };
 
   const rows = await prisma.user.findMany({
@@ -135,7 +158,20 @@ async function findAll() {
     include: accessInclude,
     orderBy: [{ name: "asc" }, { id: "asc" }],
   });
-  return rows.map(toPublicUser);
+  const publicUsers = rows.map(toPublicUser);
+  const hasAdministrator = publicUsers.some(({ role }) => role === "ADMIN");
+  if (!hasAdministrator) return publicUsers;
+  const groups = await prisma.group.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, slug: true },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+  return publicUsers.map((user) => user.role === "ADMIN" ? {
+    ...user,
+    isMaster: true,
+    groupIds: groups.map(({ id }) => id),
+    accessibleGroups: groups,
+  } : user);
 }
 
 async function updateAccess(id, { roleCode, groupId, positionId }) {
@@ -180,7 +216,7 @@ async function updateAccess(id, { roleCode, groupId, positionId }) {
     }
 
     const updated = await tx.user.findUnique({ where: { id: userId }, include: accessInclude });
-    return toPublicUser(updated);
+    return withMasterGroupScope(toPublicUser(updated), tx);
   });
 }
 
@@ -221,4 +257,5 @@ module.exports = {
   toPublicUser,
   accessInclude,
   isHumanResourcesGroup,
+  withMasterGroupScope,
 };

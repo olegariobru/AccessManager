@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const userRepository = require("../src/repositories/user.repository");
 const securityRepository = require("../src/repositories/security.repository");
 const userService = require("../src/services/user.services");
+const prisma = require("../src/config/prisma");
 
 function stubAudit(t) {
   const original = securityRepository.audit;
@@ -132,9 +133,75 @@ test("coordenador do grupo RH recebe acesso à fila global do RH", () => {
   assert.deepEqual(user.groupIds, [7]);
 });
 
+test("administrador master recebe acesso a todos os grupos ativos", async () => {
+  const groups = [
+    { id: 2, name: "Financeiro", slug: "financeiro" },
+    { id: 1, name: "TI", slug: "ti" },
+  ];
+  const administrator = await userRepository.withMasterGroupScope({
+    id: 1,
+    role: "ADMIN",
+    roles: ["ADMIN"],
+    groupIds: [],
+    accessibleGroups: [],
+  }, {
+    group: {
+      findMany: async (query) => {
+        assert.deepEqual(query.where, { isActive: true });
+        return groups;
+      },
+    },
+  });
+
+  assert.equal(administrator.isMaster, true);
+  assert.deepEqual(administrator.groupIds, [2, 1]);
+  assert.deepEqual(administrator.accessibleGroups, groups);
+});
+
 test("inativação impede auto-inativação", async () => {
   await assert.rejects(
     () => userService.deleteUser(7, { id: 7 }),
     (error) => error.statusCode === 403,
   );
+});
+
+test("pesquisa de usuários normaliza o termo antes de consultar", async (t) => {
+  const original = userRepository.findAll;
+  let receivedSearch;
+  t.after(() => { userRepository.findAll = original; });
+  userRepository.findAll = async (search) => {
+    receivedSearch = search;
+    return [{ id: 1, name: "Bruno" }];
+  };
+
+  const users = await userService.listUsers("  BRUNO@example.com  ");
+
+  assert.equal(receivedSearch, "BRUNO@example.com");
+  assert.equal(users.length, 1);
+});
+
+test("pesquisa de usuários rejeita termos acima do limite", async () => {
+  await assert.rejects(
+    () => userService.listUsers("a".repeat(101)),
+    (error) => error.statusCode === 400 && error.code === "INVALID_SEARCH",
+  );
+});
+
+test("repositório pesquisa usuários ativos por nome ou e-mail sem diferenciar maiúsculas", async (t) => {
+  const original = prisma.user.findMany;
+  let query;
+  t.after(() => { prisma.user.findMany = original; });
+  prisma.user.findMany = async (options) => {
+    query = options;
+    return [];
+  };
+
+  await userRepository.findAll("bruno");
+
+  assert.equal(query.where.deletedAt, null);
+  assert.equal(query.where.status, "ACTIVE");
+  assert.deepEqual(query.where.OR, [
+    { name: { contains: "bruno", mode: "insensitive" } },
+    { email: { contains: "bruno", mode: "insensitive" } },
+  ]);
 });

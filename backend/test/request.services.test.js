@@ -52,6 +52,21 @@ test("coordenador pode solicitar as próprias férias", async (t) => {
   assert.equal(result.initialStatus, "PENDING_HR");
 });
 
+test("administrador envia as próprias férias diretamente para o RH", async (t) => {
+  stubAudit(t);
+  const original = requestRepository.createVacation;
+  t.after(() => { requestRepository.createVacation = original; });
+  requestRepository.createVacation = async (payload) => payload;
+
+  const result = await requestService.createRequest(
+    { id: 1, role: "ADMIN" },
+    { startDate: "2026-10-01", endDate: "2026-10-15" },
+  );
+
+  assert.equal(result.userId, 1);
+  assert.equal(result.initialStatus, "PENDING_HR");
+});
+
 test("coordenador lista e analisa somente grupos atribuídos", async (t) => {
   stubAudit(t);
   const originalList = requestRepository.list;
@@ -149,6 +164,21 @@ test("coordenador não pode analisar as próprias férias", async (t) => {
     () => requestService.reviewRequest(
       { id: 8, role: "COORDINATOR", groupIds: [3] },
       20,
+      { status: "APPROVED" },
+    ),
+    (error) => error.statusCode === 403 && error.code === "SELF_REVIEW_DENIED",
+  );
+});
+
+test("administrador não pode analisar as próprias férias", async (t) => {
+  const originalFind = requestRepository.findById;
+  t.after(() => { requestRepository.findById = originalFind; });
+  requestRepository.findById = async () => ({ id: 22, userId: 1, groupId: 3, status: "PENDING" });
+
+  await assert.rejects(
+    () => requestService.reviewRequest(
+      { id: 1, role: "ADMIN", groupIds: [] },
+      22,
       { status: "APPROVED" },
     ),
     (error) => error.statusCode === 403 && error.code === "SELF_REVIEW_DENIED",
