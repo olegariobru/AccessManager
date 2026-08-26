@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutDashboard, LogOut, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, ContactRound, Files, LayoutDashboard, LogOut, ShieldCheck, Upload, UserRound, UsersRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { clearSession, getSession } from "../utils/auth";
 import { Logo } from "./Logo";
@@ -32,6 +32,7 @@ export function DashboardLayout({ title, description, children }) {
         <nav className="dashboard-switcher" aria-label="Áreas disponíveis">
           {session?.user.role === "ADMIN" && <>
             <ViewButton active={location.pathname === "/admin"} icon={<ShieldCheck size={16} />} onClick={() => navigate("/admin")}>Administração</ViewButton>
+            <ViewButton active={location.pathname === "/admin/clientes"} icon={<ContactRound size={16} />} onClick={() => navigate("/admin/clientes")}>Clientes</ViewButton>
             <ViewButton active={location.pathname === "/usuario"} icon={<UserRound size={16} />} onClick={() => navigate("/usuario")}>Funcionário</ViewButton>
             <ViewButton active={location.pathname === "/coordenador"} icon={<UsersRound size={16} />} onClick={() => navigate("/coordenador")}>Coordenador</ViewButton>
             <ViewButton active={location.pathname === "/rh"} icon={<CalendarDays size={16} />} onClick={() => navigate("/rh")}>RH</ViewButton>
@@ -40,6 +41,9 @@ export function DashboardLayout({ title, description, children }) {
             <ViewButton active={location.pathname === "/coordenador"} icon={<UsersRound size={16} />} onClick={() => navigate("/coordenador")}>Minha equipe</ViewButton>
             <ViewButton active={location.pathname === "/usuario"} icon={<CalendarDays size={16} />} onClick={() => navigate("/usuario")}>Minhas férias e holerites</ViewButton>
           </>}
+          {session?.user.role === "USER" && <ViewButton active={location.pathname === "/usuario"} icon={<UserRound size={16} />} onClick={() => navigate("/usuario")}>Área do funcionário</ViewButton>}
+          {session?.user.isDocumentPublisher && <ViewButton active={location.pathname === "/documentos"} icon={<Upload size={16} />} onClick={() => navigate("/documentos")}>Publicar documentos</ViewButton>}
+          {session?.user.role === "CLIENT" && <ViewButton active={location.pathname === "/cliente"} icon={<Files size={16} />} onClick={() => navigate("/cliente")}>Meus arquivos</ViewButton>}
         </nav>
         <div className="dashboard-title">
           <span><LayoutDashboard size={20} /> Visão geral</span>

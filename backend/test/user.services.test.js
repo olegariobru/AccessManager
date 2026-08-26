@@ -130,7 +130,43 @@ test("coordenador do grupo RH recebe acesso à fila global do RH", () => {
 
   assert.equal(user.role, "COORDINATOR");
   assert.equal(user.isHr, true);
+  assert.equal(user.isHrMember, false);
+  assert.equal(user.isDocumentPublisher, false);
   assert.deepEqual(user.groupIds, [7]);
+});
+
+test("vínculo ativo com Contabilidade habilita publicação de documentos", () => {
+  const user = userRepository.toPublicUser({
+    id: 9,
+    name: "Profissional Contábil",
+    email: "contabil@example.com",
+    roles: [{ role: { code: "USER" } }],
+    memberships: [{
+      group: { id: 4, name: "CONTABILIDADE", slug: "contabilidade" },
+      position: { id: 2, name: "Contador" },
+    }],
+    coordinatedGroups: [],
+  });
+
+  assert.equal(user.isAccounting, true);
+  assert.equal(user.isHr, false);
+  assert.equal(user.isDocumentPublisher, true);
+});
+
+test("conta de cliente recebe perfil próprio e não ganha permissão de publicação", () => {
+  const user = userRepository.toPublicUser({
+    id: 18,
+    name: "Cliente Exemplo",
+    email: "cliente@example.com",
+    roles: [{ role: { code: "CLIENT" } }],
+    memberships: [],
+    coordinatedGroups: [],
+  });
+
+  assert.equal(user.role, "CLIENT");
+  assert.equal(user.isDocumentPublisher, false);
+  assert.equal(user.isHr, false);
+  assert.equal(user.isAccounting, false);
 });
 
 test("administrador master recebe acesso a todos os grupos ativos", async () => {
@@ -200,6 +236,7 @@ test("repositório pesquisa usuários ativos por nome ou e-mail sem diferenciar 
 
   assert.equal(query.where.deletedAt, null);
   assert.equal(query.where.status, "ACTIVE");
+  assert.deepEqual(query.where.roles, { none: { role: { code: "CLIENT" } } });
   assert.deepEqual(query.where.OR, [
     { name: { contains: "bruno", mode: "insensitive" } },
     { email: { contains: "bruno", mode: "insensitive" } },

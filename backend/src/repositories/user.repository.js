@@ -16,13 +16,24 @@ const accessInclude = {
 function primaryRole(roleCodes = []) {
   if (roleCodes.includes("ADMIN")) return "ADMIN";
   if (roleCodes.includes("COORDINATOR")) return "COORDINATOR";
+  if (roleCodes.includes("CLIENT")) return "CLIENT";
   return "USER";
 }
 
-function isHumanResourcesGroup(group) {
+function matchesGroup(group, expectedName, expectedSlug) {
   const name = String(group?.name || "").trim().toUpperCase();
   const slug = String(group?.slug || "").trim().toLowerCase();
-  return name === "RH" || slug === "rh" || /^rh-[a-f0-9]{8}$/.test(slug);
+  return name === expectedName
+    || slug === expectedSlug
+    || new RegExp(`^${expectedSlug}-[a-f0-9]{8}$`).test(slug);
+}
+
+function isHumanResourcesGroup(group) {
+  return matchesGroup(group, "RH", "rh");
+}
+
+function isAccountingGroup(group) {
+  return matchesGroup(group, "CONTABILIDADE", "contabilidade");
 }
 
 function toPublicUser(user) {
@@ -31,8 +42,10 @@ function toPublicUser(user) {
   const membership = user.memberships?.[0];
   const { passwordHash: _passwordHash, roles: _roles, memberships: _memberships, coordinatedGroups, ...identity } = user;
   const managedGroups = coordinatedGroups || [];
-  const isHr = isHumanResourcesGroup(membership?.group)
+  const isHrMember = isHumanResourcesGroup(membership?.group);
+  const isHr = isHrMember
     || managedGroups.some(({ group }) => isHumanResourcesGroup(group));
+  const isAccounting = isAccountingGroup(membership?.group);
 
   return {
     ...identity,
@@ -42,6 +55,9 @@ function toPublicUser(user) {
     group: membership?.group || null,
     position: membership?.position || null,
     isHr,
+    isHrMember,
+    isAccounting,
+    isDocumentPublisher: isHrMember || isAccounting,
     groupIds: managedGroups.map(({ groupId }) => groupId),
     accessibleGroups: managedGroups.map(({ group }) => group),
     grupo: membership?.group?.name || null,
@@ -145,6 +161,7 @@ async function findAll(search = "") {
   const where = {
     deletedAt: null,
     status: "ACTIVE",
+    roles: { none: { role: { code: "CLIENT" } } },
     ...(search ? {
       OR: [
         { name: { contains: search, mode: "insensitive" } },
@@ -257,5 +274,6 @@ module.exports = {
   toPublicUser,
   accessInclude,
   isHumanResourcesGroup,
+  isAccountingGroup,
   withMasterGroupScope,
 };

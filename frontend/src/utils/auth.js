@@ -16,6 +16,7 @@ export function roleDestination(userOrRole) {
     ADMIN: "/admin",
     COORDINATOR: "/coordenador",
     USER: "/usuario",
+    CLIENT: "/cliente",
   };
   const role = normalizeRole(user.role);
   if (["USER", "COORDINATOR"].includes(role) && user.isHr) return "/rh";

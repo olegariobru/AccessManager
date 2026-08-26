@@ -48,6 +48,24 @@ function authorizeHumanResources(req, res, next) {
   return next();
 }
 
+function authorizeDocumentPublisher(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: "Usuário não autenticado" });
+  if (!req.user.isDocumentPublisher) {
+    return res.status(403).json({
+      error: "Publicação exclusiva para integrantes do RH ou da Contabilidade",
+    });
+  }
+  return next();
+}
+
+function authorizeClientDirectory(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: "Usuário não autenticado" });
+  if (req.user.role !== "ADMIN" && !req.user.isDocumentPublisher) {
+    return res.status(403).json({ error: "Acesso não autorizado à lista de clientes" });
+  }
+  return next();
+}
+
 function validateCredentials(req, res, next) {
   const normalizedEmail = String(req.body?.email || "").trim().toLowerCase();
   const password = req.body?.password;
@@ -65,5 +83,7 @@ module.exports = {
   authMiddleware,
   authorizeRoles,
   authorizeHumanResources,
+  authorizeDocumentPublisher,
+  authorizeClientDirectory,
   validateCredentials,
 };

@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const userRepository = require("../src/repositories/user.repository");
 const {
   authMiddleware,
+  authorizeClientDirectory,
+  authorizeDocumentPublisher,
   authorizeRoles,
   authorizeHumanResources,
   validateCredentials,
@@ -92,10 +94,64 @@ test("permite apenas integrante do grupo RH na fila de marcação", () => {
   assert.equal(otherGroupRes.statusCode, 403);
 });
 
+test("publicação de documentos exige vínculo com RH ou Contabilidade", () => {
+  let hrAllowed = false;
+  let accountingAllowed = false;
+  const denied = response();
+  authorizeDocumentPublisher(
+    { user: { role: "USER", isDocumentPublisher: true, isAccounting: false } },
+    response(),
+    () => { hrAllowed = true; },
+  );
+  authorizeDocumentPublisher(
+    { user: { role: "USER", isDocumentPublisher: true, isAccounting: true } },
+    response(),
+    () => { accountingAllowed = true; },
+  );
+  authorizeDocumentPublisher(
+    { user: { role: "ADMIN", isDocumentPublisher: false, isAccounting: false } },
+    denied,
+    () => assert.fail(),
+  );
+  assert.equal(hrAllowed, true);
+  assert.equal(accountingAllowed, true);
+  assert.equal(denied.statusCode, 403);
+});
+
+test("diretório de clientes permite administrador ou publicador e bloqueia cliente", () => {
+  let adminAllowed = false;
+  let publisherAllowed = false;
+  const denied = response();
+  authorizeClientDirectory(
+    { user: { role: "ADMIN", isDocumentPublisher: false } },
+    response(),
+    () => { adminAllowed = true; },
+  );
+  authorizeClientDirectory(
+    { user: { role: "USER", isDocumentPublisher: true } },
+    response(),
+    () => { publisherAllowed = true; },
+  );
+  authorizeClientDirectory(
+    { user: { role: "CLIENT", isDocumentPublisher: false } },
+    denied,
+    () => assert.fail(),
+  );
+  assert.equal(adminAllowed, true);
+  assert.equal(publisherAllowed, true);
+  assert.equal(denied.statusCode, 403);
+});
+
 test("reconhece o grupo RH atual e o slug legado da migration", () => {
   assert.equal(userRepository.isHumanResourcesGroup({ name: "RH", slug: "rh" }), true);
   assert.equal(userRepository.isHumanResourcesGroup({ name: "RH", slug: "rh-a1b2c3d4" }), true);
   assert.equal(userRepository.isHumanResourcesGroup({ name: "TI", slug: "ti" }), false);
+});
+
+test("reconhece o grupo Contabilidade atual e o slug legado da migration", () => {
+  assert.equal(userRepository.isAccountingGroup({ name: "CONTABILIDADE", slug: "contabilidade" }), true);
+  assert.equal(userRepository.isAccountingGroup({ name: "CONTABILIDADE", slug: "contabilidade-a1b2c3d4" }), true);
+  assert.equal(userRepository.isAccountingGroup({ name: "FINANCEIRO", slug: "financeiro" }), false);
 });
 
 test("normaliza credenciais e rejeita dados inválidos", () => {

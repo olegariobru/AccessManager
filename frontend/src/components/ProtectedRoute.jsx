@@ -8,7 +8,7 @@ import {
   updateSessionUser,
 } from "../utils/auth";
 
-export function ProtectedRoute({ allowedRoles, requireHr = false }) {
+export function ProtectedRoute({ allowedRoles, requireHr = false, requireDocumentPublisher = false }) {
   const location = useLocation();
   const [session, setSession] = useState(() => getSession());
   const [checking, setChecking] = useState(Boolean(session));
@@ -47,6 +47,9 @@ export function ProtectedRoute({ allowedRoles, requireHr = false }) {
     return <Navigate to={roleDestination(session.user)} replace />;
   }
   if (requireHr && !session.user.isHr && userRole !== "ADMIN") {
+    return <Navigate to={roleDestination(session.user)} replace />;
+  }
+  if (requireDocumentPublisher && !session.user.isDocumentPublisher) {
     return <Navigate to={roleDestination(session.user)} replace />;
   }
   return <Outlet />;

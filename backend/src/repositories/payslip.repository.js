@@ -20,7 +20,7 @@ function toPayslipDto(payslip) {
   };
 }
 
-async function list({ userId, status, groupIds }) {
+async function list({ userId, status, groupIds } = {}) {
   const where = {
     ...(userId ? { userId: Number(userId) } : {}),
     ...(status ? { status } : {}),
@@ -82,4 +82,57 @@ async function upsert({
   });
 }
 
-module.exports = { list, upsert };
+async function upsertWithFile({
+  userId,
+  year,
+  month,
+  grossAmount,
+  netAmount,
+  file,
+  publisherId,
+}) {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.payslip.findUnique({
+      where: { userId_year_month: { userId, year, month } },
+      include: { file: true },
+    });
+    const fileAsset = await tx.fileAsset.create({ data: file });
+    const payslip = await tx.payslip.upsert({
+      where: { userId_year_month: { userId, year, month } },
+      update: {
+        grossAmount,
+        netAmount,
+        fileId: fileAsset.id,
+        status: "PUBLISHED",
+        publishedById: publisherId,
+        publishedAt: new Date(),
+      },
+      create: {
+        userId,
+        year,
+        month,
+        grossAmount,
+        netAmount,
+        fileId: fileAsset.id,
+        status: "PUBLISHED",
+        publishedById: publisherId,
+        publishedAt: new Date(),
+      },
+      include,
+    });
+    if (current?.fileId) await tx.fileAsset.delete({ where: { id: current.fileId } });
+    return {
+      payslip: toPayslipDto(payslip),
+      replacedStorageKey: current?.file?.storageKey || null,
+    };
+  });
+}
+
+async function findForDownload(id) {
+  return prisma.payslip.findUnique({
+    where: { id: Number(id) },
+    include: { file: true },
+  });
+}
+
+module.exports = { list, upsert, upsertWithFile, findForDownload };

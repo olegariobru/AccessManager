@@ -13,6 +13,7 @@ async function listOptions() {
       orderBy: { name: "asc" },
     }),
     prisma.role.findMany({
+      where: { code: { not: "CLIENT" } },
       select: { id: true, code: true, description: true },
       orderBy: { id: "asc" },
     }),

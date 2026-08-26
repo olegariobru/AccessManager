@@ -4,6 +4,7 @@ const ACTION_DESCRIPTIONS = {
   USER_CREATED: "Usuário criado",
   USER_ACCESS_UPDATED: "Acesso do usuário atualizado",
   USER_DEACTIVATED: "Usuário inativado",
+  CLIENT_CREATED: "Cliente criado",
   PASSWORD_CHANGED: "Senha alterada pelo próprio usuário",
   PASSWORD_RESET_BY_ADMIN: "Senha redefinida por um administrador",
   COORDINATOR_GROUP_ASSIGNED: "Grupo atribuído ao coordenador",
@@ -16,6 +17,10 @@ const ACTION_DESCRIPTIONS = {
   VACATION_CANCELLED: "Solicitação de férias cancelada",
   PAYSLIP_SAVED: "Holerite salvo",
   PAYSLIP_PUBLISHED: "Holerite publicado",
+  PAYSLIP_DOWNLOADED: "Holerite baixado",
+  IRPF_PUBLISHED: "Arquivo de IRPF publicado",
+  ITAU_BANK_SLIP_PUBLISHED: "Boleto Itaú publicado",
+  CLIENT_DOCUMENT_DOWNLOADED: "Documento do cliente baixado",
 };
 
 function describeAction(action) {

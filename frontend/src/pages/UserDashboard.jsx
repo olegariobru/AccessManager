@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   CalendarCheck,
   Clock3,
+  Download,
   FileText,
   Send,
   Users,
@@ -11,7 +12,8 @@ import {
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/Button";
 import { api } from "../services/api";
-import { getSession } from "../utils/auth";
+import { downloadProtectedFile } from "../services/documents";
+import { apiErrorMessage, getSession } from "../utils/auth";
 
 const statusLabels = {
   PENDING: "Pendente",
@@ -50,6 +52,7 @@ export function UserDashboard() {
   const [payslips, setPayslips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(null);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({
     startDate: "",
@@ -102,6 +105,21 @@ export function UserDashboard() {
       setMessage(error.response?.data?.error || "Não foi possível enviar a solicitação.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function downloadPayslip(payslip) {
+    setDownloading(payslip.id);
+    setMessage("");
+    try {
+      await downloadProtectedFile(
+        `/dashboard/client/payslips/${payslip.id}/download`,
+        payslip.file?.originalName,
+      );
+    } catch (error) {
+      setMessage(apiErrorMessage(error, "Não foi possível baixar o holerite."));
+    } finally {
+      setDownloading(null);
     }
   }
 
@@ -187,10 +205,11 @@ export function UserDashboard() {
         {payslips.length === 0 ? <p className="empty-state">Nenhum holerite publicado.</p> : (
           <div className="request-list">
             {payslips.map((payslip) => (
-              <article className="request-item" key={payslip.id}>
+              <article className="request-item request-item-review" key={payslip.id}>
                 <span className="request-type request-payslip">Holerite</span>
                 <div><strong>{String(payslip.month).padStart(2, "0")}/{payslip.year}</strong><span>{payslip.file?.originalName || "Arquivo privado"}</span></div>
                 <span className={`status-badge status-${payslip.status.toLowerCase()}`}>{payslip.status}</span>
+                {payslip.file && <Button className="button-secondary button-small" type="button" loading={downloading === payslip.id} onClick={() => downloadPayslip(payslip)}><Download size={15} /> Baixar</Button>}
               </article>
             ))}
           </div>
