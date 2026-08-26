@@ -5,7 +5,7 @@ import { Button } from "../components/Button";
 import { InputField } from "../components/InputField";
 import { useForm } from "../hooks/useForm";
 import { api } from "../services/api";
-import { roleDestination, saveSession } from "../utils/auth";
+import { apiErrorMessage, roleDestination, saveSession } from "../utils/auth";
 import { validateEmail, validatePassword } from "../utils/validation";
 
 export function Login() {
@@ -27,9 +27,9 @@ export function Login() {
       if (!data.token || !data.user) throw new Error("Resposta de autenticação inválida");
 
       saveSession(data.token, data.user);
-      navigate(roleDestination(data.user.role), { replace: true });
+      navigate(data.user.mustChangePassword ? "/alterar-senha" : roleDestination(data.user), { replace: true });
     } catch (error) {
-      setMessage(error.response?.data?.message || error.response?.data?.error || "Não foi possível entrar. Verifique os dados ou tente novamente.");
+      setMessage(apiErrorMessage(error, "Não foi possível entrar. Verifique os dados ou tente novamente."));
     } finally { setLoading(false); }
   }
 

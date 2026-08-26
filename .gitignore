@@ -1,5 +1,76 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# Dependencies
+node_modules/
+**/node_modules/
 
-/src/generated/prisma
+# Environment variables and local secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Credentials and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+secrets.json
+
+# Build, generated code and test output
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+.nyc_output/
+**/.nyc_output/
+backend/src/generated/
+
+# Logs, caches and temporary files
+*.log
+logs/
+**/logs/
+.cache/
+**/.cache/
+.turbo/
+**/.turbo/
+.vite/
+**/.vite/
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.save
+*.save.*
+*.swp
+*.swo
+
+# Local development tools and editors
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.windsurf/
+**/.windsurf/
+.codex/
+**/.codex/
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.code-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local-only diagnostic scripts
+backend/test-db.js
+backend/teste-hash.js

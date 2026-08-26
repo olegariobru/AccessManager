@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { Check, Clock3, FileText, RefreshCw, Users, X } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/Button";
 import { api } from "../services/api";
 import { getSession } from "../utils/auth";
 
-const typeLabels = { VACATION: "Férias", PAYSLIP: "Holerite" };
-const statusLabels = { PENDING: "Pendente", APPROVED: "Aprovada", REJECTED: "Recusada" };
+const statusLabels = {
+  PENDING: "Aguardando coordenador",
+  PENDING_HR: "Aguardando RH",
+  APPROVED: "Férias marcadas",
+  REJECTED: "Recusada",
+  CANCELLED: "Cancelada",
+};
 
 function formatDate(value) {
   if (!value) return "—";
@@ -50,8 +56,11 @@ export function CoordinatorDashboard() {
   }
 
   const pending = requests.filter(({ status }) => status === "PENDING");
-  const vacationCount = pending.filter(({ type }) => type === "VACATION").length;
-  const payslipCount = pending.filter(({ type }) => type === "PAYSLIP").length;
+  const vacationCount = pending.length;
+
+  if (coordinator?.isHr) {
+    return <Navigate to="/rh" replace />;
+  }
 
   return (
     <DashboardLayout
@@ -61,7 +70,7 @@ export function CoordinatorDashboard() {
       <section className="metric-grid">
         <article className="metric-card"><span className="metric-icon"><Clock3 size={22} /></span><div><span>Pendentes</span><strong>{pending.length}</strong></div></article>
         <article className="metric-card"><span className="metric-icon"><Users size={22} /></span><div><span>Pedidos de férias</span><strong>{vacationCount}</strong></div></article>
-        <article className="metric-card"><span className="metric-icon"><FileText size={22} /></span><div><span>Pedidos de holerite</span><strong>{payslipCount}</strong></div></article>
+        <article className="metric-card"><span className="metric-icon"><FileText size={22} /></span><div><span>Grupos gerenciados</span><strong>{coordinator?.groupIds?.length || 1}</strong></div></article>
       </section>
 
       <section className="dashboard-panel list-panel">
@@ -74,18 +83,19 @@ export function CoordinatorDashboard() {
           <div className="request-list">
             {requests.map((request) => (
               <article className="request-item request-item-review" key={request.id}>
-                <span className={`request-type request-${request.type.toLowerCase()}`}>{typeLabels[request.type]}</span>
+                <span className="request-type request-vacation">Férias</span>
                 <div>
                   <strong>{request.userName}</strong>
-                  <span>{request.type === "VACATION" ? `${formatDate(request.startDate)} a ${formatDate(request.endDate)}` : request.notes || "Solicitação de holerite"}</span>
+                  <span>{formatDate(request.startDate)} a {formatDate(request.endDate)} · {request.days} dias</span>
                 </div>
-                <span className={`status-badge status-${request.status.toLowerCase()}`}>{statusLabels[request.status]}</span>
-                {request.status === "PENDING" && (
+                <span className={`status-badge status-${request.status.toLowerCase().replace("_", "-")}`}>{statusLabels[request.status]}</span>
+                {request.status === "PENDING" && request.userId !== coordinator?.id && (
                   <div className="review-actions">
                     <button className="icon-button approve" type="button" title="Aprovar" onClick={() => reviewRequest(request.id, "APPROVED")}><Check size={17} /></button>
                     <button className="icon-button reject" type="button" title="Recusar" onClick={() => reviewRequest(request.id, "REJECTED")}><X size={17} /></button>
                   </div>
                 )}
+                {request.userId === coordinator?.id && <span className="self-review-note">Decisão exclusiva do RH</span>}
               </article>
             ))}
           </div>

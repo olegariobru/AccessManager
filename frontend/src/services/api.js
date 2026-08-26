@@ -1,14 +1,16 @@
 import axios from "axios";
-import { clearSession } from "../utils/auth";
+import { clearSession, getAccessToken } from "../utils/auth";
+
+const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
-  timeout: 10000,
+  baseURL: apiUrl,
+  timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessmanager:token");
+  const token = getAccessToken();
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
@@ -19,11 +21,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401
+      && !String(error.config?.url || "").includes("/auth/login")) {
       clearSession();
-      if (window.location.pathname !== "/login") {
-        window.location.assign("/login");
-      }
     }
     return Promise.reject(error);
   },

@@ -21,17 +21,17 @@ export function ForgotPassword() {
     setLoading(true);
     try {
       await api.post("/auth/forgot-password", form.values);
-      setMessage("Se o e-mail estiver cadastrado, você receberá as instruções em instantes.");
-    } catch { setMessage("Se o e-mail estiver cadastrado, você receberá as instruções em instantes."); }
+      setMessage("Se o e-mail estiver cadastrado, os administradores receberão a solicitação em instantes.");
+    } catch { setMessage("Se o e-mail estiver cadastrado, os administradores receberão a solicitação em instantes."); }
     finally { setLoading(false); }
   }
 
   return (
-    <AuthCard eyebrow="Recuperação de acesso" title="Esqueceu sua senha?" description="Informe seu e-mail para receber as instruções de recuperação." footerText="Lembrou sua senha?" footerLink="/login" footerLabel="Voltar para o login">
+    <AuthCard eyebrow="Recuperação de acesso" title="Esqueceu sua senha?" description="Informe seu e-mail para solicitar a redefinição de senha aos administradores." footerText="Lembrou sua senha?" footerLink="/login" footerLabel="Voltar para o login">
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <InputField id="forgot-email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="voce@empresa.com" value={form.values.email} onChange={form.handleChange} error={form.errors.email} />
         {message && <p className="form-message success" role="status">{message}</p>}
-        <Button type="submit" loading={loading}>Enviar instruções</Button>
+        <Button type="submit" loading={loading}>Solicitar redefinição</Button>
       </form>
     </AuthCard>
   );
