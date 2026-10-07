@@ -1,8 +1,6 @@
 const clientDocumentService = require("../services/client-document.services");
 
-function sendError(res, error, fallback) {
-  return res.status(error.statusCode || 500).json({ error: error.message || fallback });
-}
+const { sendError } = require("../security/errors");
 
 async function listOwn(req, res) {
   try {

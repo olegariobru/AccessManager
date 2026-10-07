@@ -1,15 +1,6 @@
 const clientService = require("../services/client.services");
 
-function sendError(res, error, fallback) {
-  if (error.statusCode) {
-    return res.status(error.statusCode).json({ error: error.message || fallback });
-  }
-  if (error.code === "P2002") {
-    return res.status(409).json({ error: "E-mail ou CPF já cadastrado" });
-  }
-  console.error(fallback, error);
-  return res.status(500).json({ error: fallback });
-}
+const { sendError } = require("../security/errors");
 
 async function list(req, res) {
   try {

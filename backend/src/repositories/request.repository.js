@@ -1,3 +1,4 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 const requestInclude = {
@@ -31,7 +32,7 @@ function toRequestDto(request) {
   };
 }
 
-async function createVacation({ userId, startDate, endDate, days, notes, initialStatus = "PENDING" }) {
+async function createVacation({ userId, startDate, endDate, days, notes, initialStatus = "PENDING", auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const membership = await tx.userMembership.findFirst({
       where: { userId: Number(userId), endsAt: null, isPrimary: true },
@@ -74,6 +75,7 @@ async function createVacation({ userId, startDate, endDate, days, notes, initial
       },
       include: requestInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: request.id }, tx);
     return toRequestDto(request);
   }, { isolationLevel: "Serializable" });
 }
@@ -101,7 +103,7 @@ async function list({ userId, groupIds, statuses }) {
   return items.map(toRequestDto);
 }
 
-async function updateStatus({ id, status, reviewerId, reason }) {
+async function updateStatus({ id, status, reviewerId, reason, auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.vacationRequest.findUnique({ where: { id: Number(id) } });
     if (!current) return null;
@@ -113,7 +115,7 @@ async function updateStatus({ id, status, reviewerId, reason }) {
     }
 
     const request = await tx.vacationRequest.update({
-      where: { id: Number(id) },
+      where: { id: Number(id), status: current.status },
       data: {
         status,
         reviewedById: Number(reviewerId),
@@ -129,11 +131,12 @@ async function updateStatus({ id, status, reviewerId, reason }) {
       },
       include: requestInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: request.id }, tx);
     return toRequestDto(request);
   });
 }
 
-async function markAsScheduled({ id, schedulerId, reason }) {
+async function markAsScheduled({ id, schedulerId, reason, auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.vacationRequest.findUnique({ where: { id: Number(id) } });
     if (!current) return null;
@@ -145,7 +148,7 @@ async function markAsScheduled({ id, schedulerId, reason }) {
     }
 
     const request = await tx.vacationRequest.update({
-      where: { id: Number(id) },
+      where: { id: Number(id), status: "PENDING_HR" },
       data: {
         status: "APPROVED",
         scheduledById: Number(schedulerId),
@@ -161,11 +164,12 @@ async function markAsScheduled({ id, schedulerId, reason }) {
       },
       include: requestInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: request.id }, tx);
     return toRequestDto(request);
   });
 }
 
-async function decideByHr({ id, status, schedulerId, reason }) {
+async function decideByHr({ id, status, schedulerId, reason, auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.vacationRequest.findUnique({ where: { id: Number(id) } });
     if (!current) return null;
@@ -177,7 +181,7 @@ async function decideByHr({ id, status, schedulerId, reason }) {
     }
     const approved = status === "APPROVED";
     const request = await tx.vacationRequest.update({
-      where: { id: Number(id) },
+      where: { id: Number(id), status: current.status },
       data: {
         status,
         scheduledById: Number(schedulerId),
@@ -186,11 +190,12 @@ async function decideByHr({ id, status, schedulerId, reason }) {
       },
       include: requestInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: request.id }, tx);
     return toRequestDto(request);
   });
 }
 
-async function cancel({ id, userId, reason }) {
+async function cancel({ id, userId, reason, auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.vacationRequest.findFirst({
       where: { id: Number(id), userId: Number(userId) },
@@ -202,7 +207,7 @@ async function cancel({ id, userId, reason }) {
       throw error;
     }
     const request = await tx.vacationRequest.update({
-      where: { id: current.id },
+      where: { id: current.id, status: "PENDING", userId: Number(userId) },
       data: {
         status: "CANCELLED",
         cancelledAt: new Date(),
@@ -217,6 +222,7 @@ async function cancel({ id, userId, reason }) {
       },
       include: requestInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: request.id }, tx);
     return toRequestDto(request);
   });
 }

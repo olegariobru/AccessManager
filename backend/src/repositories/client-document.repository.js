@@ -1,3 +1,4 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 const include = {
@@ -47,7 +48,7 @@ async function list({ userId, status, type } = {}) {
   return documents.map(toDocumentDto);
 }
 
-async function save({ document, file }) {
+async function save({ document, file, auditEvent }) {
   return prisma.$transaction(async (tx) => {
     const current = document.type === "IRPF"
       ? await tx.clientDocument.findFirst({
@@ -81,6 +82,7 @@ async function save({ document, file }) {
       });
     }
 
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: stored.id }, tx);
     return {
       document: toDocumentDto(stored),
       replacedStorageKey: current?.file?.storageKey || null,

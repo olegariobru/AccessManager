@@ -22,11 +22,15 @@ const vacation = {id:1,userId:2,userName:staff.name,userGroup:'Administrativo',s
   await page.route('http://localhost:3000/**', async route=>{
    const req=route.request();const url=new URL(req.url());const path=url.pathname;const method=req.method();
    calls.push({path,method,body:req.postData(),query:url.search});
-   if(method==='OPTIONS') return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'*'}});
+   if(method==='OPTIONS') return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'http://localhost:5173','Access-Control-Allow-Credentials':'true','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'*'}});
+   if(!['GET','HEAD','OPTIONS'].includes(method)) assert.equal(req.headers()['x-csrf-token'],'a'.repeat(64));
+   assert.equal(req.headers().authorization,undefined);
    let data={};let status=200;
    if(apiFailure && path!='/auth/me'){status=500;data={error:'Não foi possível carregar os dados. Tente novamente.'};}
-   else if(path==='/auth/me')data={user};
-   else if(path==='/auth/login')data={token:'fixture-token',user};
+   else if(path==='/auth/me'){status=user?200:401;data=user?{user}:{error:'Sessão encerrada'};}
+   else if(path==='/auth/csrf')data={csrfToken:'a'.repeat(64)};
+   else if(path==='/auth/logout'){user=null;data={};}
+   else if(path==='/auth/login')data={csrfToken:'a'.repeat(64),user};
    else if(path==='/auth/organization-options')data={groups:[baseUser.group],positions:[baseUser.position],roles:[{id:1,code:'USER'},{id:2,code:'COORDINATOR'},{id:3,code:'ADMIN'}]};
    else if(path==='/auth/users' && method==='GET')data={users:empty?[]:[staff,{...baseUser,role:'COORDINATOR'}]};
    else if(path==='/auth/users' && method==='POST')data={user:{...staff,id:8,...JSON.parse(req.postData())}};
@@ -41,12 +45,12 @@ const vacation = {id:1,userId:2,userName:staff.name,userGroup:'Administrativo',s
    else if(path.endsWith('/download'))return route.fulfill({status:200,contentType:'application/pdf',body:'%PDF-1.4\n%%EOF'});
    else if(['/dashboard/payslips/mine','/dashboard/admin/payslips'].includes(path))data={payslips:empty?[]:[payslip]};
    else if(['/dashboard/client/documents','/dashboard/admin/client-documents'].includes(path))data={documents:empty?[]:docs};
-   else if(['/auth/register','/auth/forgot-password','/auth/change-password','/auth/password-reset-requests'].includes(path))data={message:'ok'};
+   else if(['/auth/forgot-password','/auth/change-password','/auth/password-reset-requests'].includes(path))data={message:'ok'};
    else if(method==='DELETE')data={message:'ok'};
    else throw Error(`Unmocked API ${method} ${path}`);
-   return route.fulfill({status,contentType:'application/json',body:JSON.stringify(data),headers:{'Access-Control-Allow-Origin':'*'}});
+   return route.fulfill({status,contentType:'application/json',body:JSON.stringify(data),headers:{'Access-Control-Allow-Origin':'http://localhost:5173','Access-Control-Allow-Credentials':'true'}});
   });
-  async function session(u){ user={...u};await page.goto('http://localhost:5173/');await page.evaluate(u=>{localStorage.setItem('accessmanager:token','fixture-token');localStorage.setItem('accessmanager:user',JSON.stringify(u));},user); }
+  async function session(u){ user={...u};await page.goto('http://localhost:5173/'); }
   async function visit(path){await page.goto('http://localhost:5173'+path);await page.locator('h1').waitFor();await page.waitForTimeout(100);const metrics=await page.evaluate(()=>({viewport:innerWidth,page:document.documentElement.scrollWidth}));assert(metrics.page<=metrics.viewport, `${path} ${width}: overflow ${metrics.page}`);}
   async function screenshot(name){ if(width===1440||width===390)await page.screenshot({path:`${dir}/${name}-${width===1440?'desktop':'mobile'}.png`,fullPage:true}); }
   // Public pages and validation feedback.
@@ -57,7 +61,8 @@ const vacation = {id:1,userId:2,userName:staff.name,userGroup:'Administrativo',s
   await page.getByLabel('E-mail',{exact:true}).fill('mariana@example.test');await page.getByLabel('Senha',{exact:true}).fill('senha-teste-123');
   await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.waitForTimeout(500); await page.getByRole('heading',{name:'Painel administrativo'}).waitFor();
   await visit('/esqueci-minha-senha');await page.getByLabel('E-mail',{exact:true}).fill('ana@example.test');await page.getByRole('button',{name:'Solicitar redefinição'}).click();await page.getByRole('status').waitFor();
-  await visit('/cadastro');await page.locator('select[name=groupId]').waitFor();
+  assert.equal(await page.getByRole('link',{name:'Cadastre-se'}).count(),0);
+  await visit('/cadastro');assert(page.url().endsWith('/'));
   // Admin modal, search, password reset and responsive tables.
   await session(baseUser);await visit('/admin');await screenshot('administracao');
   await page.getByRole('button',{name:'Adicionar usuário',exact:true}).click();await page.getByRole('dialog').waitFor();

@@ -46,6 +46,7 @@ test("cadastro cria conta CLIENT com senha em hash e sem auditar CPF", async (t)
   clientRepository.findByCpf = async () => null;
   let persisted;
   clientRepository.createWithAccount = async (payload) => {
+    await securityRepository.audit({ ...payload.auditEvent, changes: { userId: 12 } });
     persisted = payload;
     return { id: 3, userId: 12, fullName: payload.fullName };
   };

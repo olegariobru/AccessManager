@@ -1,9 +1,7 @@
 const organizationRepository = require("../repositories/organization.repository");
 const organizationService = require("../services/organization.services");
 
-function sendError(res, error, fallback) {
-  return res.status(error.statusCode || 400).json({ error: error.message || fallback });
-}
+const { sendError } = require("../security/errors");
 
 async function listOptions(_req, res) {
   try {

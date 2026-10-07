@@ -59,7 +59,10 @@ test("publicação registra auditoria sem expor chave do arquivo", async (t) => 
     payslipRepository.upsert = originalUpsert;
     securityRepository.audit = originalAudit;
   });
-  payslipRepository.upsert = async (payload) => ({ id: 10, status: "PUBLISHED", ...payload });
+  payslipRepository.upsert = async (payload) => {
+    audited = payload.auditEvent;
+    return { id: 10, status: "PUBLISHED", ...payload };
+  };
   securityRepository.audit = async (payload) => { audited = payload; };
   const result = await payslipService.upsertPayslip(
     { id: 1, role: "USER", isDocumentPublisher: true, isHrMember: true },

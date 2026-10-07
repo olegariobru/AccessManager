@@ -1,9 +1,11 @@
-const TOKEN_KEY = "accessmanager:token";
-const USER_KEY = "accessmanager:user";
+let currentUser = null;
+let csrfToken = null;
 
-function storage() {
-  return globalThis.localStorage;
-}
+// Remove credentials left by older versions; never persist the new session.
+try {
+  globalThis.localStorage?.removeItem("accessmanager:token");
+  globalThis.localStorage?.removeItem("accessmanager:user");
+} catch { /* Storage may be unavailable. */ }
 
 export function normalizeRole(role) {
   return String(role || "USER").toUpperCase();
@@ -23,43 +25,18 @@ export function roleDestination(userOrRole) {
   return destinations[role] || "/usuario";
 }
 
-export function saveSession(token, user) {
-  if (!token || !user?.id || !user?.role) throw new Error("Sessão inválida");
-  storage().setItem(TOKEN_KEY, token);
-  storage().setItem(USER_KEY, JSON.stringify(user));
+export function saveSession(user) {
+  if (!user?.id || !user?.role) throw new Error("Sessão inválida");
+  currentUser = user;
 }
-
-export function updateSessionUser(user) {
-  const token = storage().getItem(TOKEN_KEY);
-  if (!token) return;
-  storage().setItem(USER_KEY, JSON.stringify(user));
-}
-
+export function updateSessionUser(user) { saveSession(user); }
 export function clearSession() {
-  storage().removeItem(TOKEN_KEY);
-  storage().removeItem(USER_KEY);
+  currentUser = null; csrfToken = null;
+  globalThis.dispatchEvent?.(new Event("accessmanager:session-ended"));
 }
-
-export function getAccessToken() {
-  return storage().getItem(TOKEN_KEY);
-}
-
-export function getSession() {
-  const token = storage().getItem(TOKEN_KEY);
-  const rawUser = storage().getItem(USER_KEY);
-  if (!token || !rawUser) return null;
-  try {
-    const user = JSON.parse(rawUser);
-    if (!user || typeof user !== "object" || !user.id || !user.role) {
-      clearSession();
-      return null;
-    }
-    return { token, user };
-  } catch {
-    clearSession();
-    return null;
-  }
-}
+export function getSession() { return currentUser ? { user: currentUser } : null; }
+export function setCsrfToken(value) { csrfToken = value; }
+export function getCsrfToken() { return csrfToken; }
 
 export function apiErrorMessage(error, fallback = "Não foi possível concluir a operação.") {
   return error.response?.data?.error?.message

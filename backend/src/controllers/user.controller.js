@@ -1,24 +1,34 @@
 const userService = require("../services/user.services");
 const passwordResetService = require("../services/password-reset.services");
 
-function sendError(res, error, fallback) {
-  const status = error.statusCode || (error.code === "P2002" ? 409 : 400);
-  return res.status(status).json({ error: error.message || fallback });
+const { sendError } = require("../security/errors");
+const sessions = require("../security/session");
+const securityRepository = require("../repositories/security.repository");
+
+async function csrf(req, res, next) {
+  try {
+    const session = await sessions.load(req) || await sessions.create(req, res);
+    return res.json({ csrfToken: session.csrfToken });
+  } catch (error) { return next(error); }
 }
 
-async function register(req, res) {
+async function logout(req, res, next) {
   try {
-    const user = await userService.createUser(req.body);
-    return res.status(201).json({ user });
-  } catch (error) {
-    return sendError(res, error, "Erro ao cadastrar usuário");
-  }
+    await securityRepository.audit({ actorId: req.user.id, action: "SESSION_ENDED", entityType: "User", entityId: req.user.id });
+    await sessions.remove(req.sessionId);
+    sessions.clearCookie(res);
+    return res.status(204).end();
+  } catch (error) { return next(error); }
 }
 
 async function login(req, res) {
   try {
-    return res.status(200).json(await userService.login(req.body));
+    const { user } = await userService.login(req.body);
+    await securityRepository.audit({ actorId: user.id, action: "LOGIN_SUCCEEDED", entityType: "User", entityId: user.id });
+    const session = await sessions.create(req, res, user);
+    return res.status(200).json({ user, csrfToken: session.csrfToken });
   } catch (error) {
+    if (error.code === "INVALID_CREDENTIALS") console.warn(JSON.stringify({ event: "LOGIN_FAILED" }));
     return sendError(res, error, "E-mail ou senha inválidos");
   }
 }
@@ -28,7 +38,7 @@ async function forgotPassword(req, res) {
   try {
     await passwordResetService.requestPasswordReset(req.body?.email, req.ip);
   } catch (error) {
-    console.error("Falha ao processar solicitação de redefinição de senha", error);
+    console.error(JSON.stringify({ event: "PASSWORD_RECOVERY_FAILED", code: error.code || "UNKNOWN" }));
   }
   return res.status(200).json({ message });
 }
@@ -49,6 +59,8 @@ async function resetPasswordByAdmin(req, res) {
 async function changePassword(req, res) {
   try {
     await userService.changeOwnPassword(req.user, req.body);
+    await sessions.remove(req.sessionId);
+    sessions.clearCookie(res);
     return res.status(200).json({ message: "Senha alterada com sucesso" });
   } catch (error) { return sendError(res, error, "Erro ao alterar senha"); }
 }
@@ -97,7 +109,8 @@ async function createUser(req, res) {
 }
 
 module.exports = {
-  register,
+  csrf,
+  logout,
   login,
   forgotPassword,
   listPasswordResetRequests,

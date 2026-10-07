@@ -1,6 +1,5 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const jwt = require("jsonwebtoken");
 const userRepository = require("../src/repositories/user.repository");
 const securityRepository = require("../src/repositories/security.repository");
 const userService = require("../src/services/user.services");
@@ -30,7 +29,7 @@ test("cadastro administrativo persiste IDs relacionais e senha em hash", async (
   const user = await userService.createUserByAdmin({
     name: "Bruno Olegário",
     email: "BRUNO@example.com",
-    password: "Teste@123456",
+    password: "Teste@1234567",
     roleCode: "COORDINATOR",
     groupId: 2,
     positionId: 3,
@@ -40,32 +39,12 @@ test("cadastro administrativo persiste IDs relacionais e senha em hash", async (
   assert.equal(persisted.groupId, 2);
   assert.equal(persisted.positionId, 3);
   assert.deepEqual(persisted.roleCodes, ["COORDINATOR"]);
-  assert.notEqual(persisted.passwordHash, "Teste@123456");
+  assert.notEqual(persisted.passwordHash, "Teste@1234567");
   assert.equal(user.role, "COORDINATOR");
 });
 
-test("cadastro público força perfil USER", async (t) => {
-  const originalFind = userRepository.findByEmail;
-  const originalCreate = userRepository.createWithAccess;
-  let persisted;
-  t.after(() => {
-    userRepository.findByEmail = originalFind;
-    userRepository.createWithAccess = originalCreate;
-  });
-  userRepository.findByEmail = async () => null;
-  userRepository.createWithAccess = async (payload) => {
-    persisted = payload;
-    return { id: 1, role: "USER" };
-  };
-  await userService.createUser({
-    name: "Usuário",
-    email: "user@example.com",
-    password: "Teste@123",
-    roleCode: "ADMIN",
-    groupId: 1,
-    positionId: 1,
-  });
-  assert.deepEqual(persisted.roleCodes, ["USER"]);
+test("serviço de cadastro público foi removido", () => {
+  assert.equal(userService.createUser, undefined);
 });
 
 test("cadastro rejeita e-mail existente", async (t) => {
@@ -76,7 +55,7 @@ test("cadastro rejeita e-mail existente", async (t) => {
     () => userService.createUserByAdmin({
       name: "Bruno",
       email: "bruno@example.com",
-      password: "Teste@123456",
+      password: "Teste@1234567",
       roleCode: "USER",
       groupId: 1,
       positionId: 1,
@@ -85,7 +64,7 @@ test("cadastro rejeita e-mail existente", async (t) => {
   );
 });
 
-test("login retorna JWT e usuário relacional sem senha", async (t) => {
+test("login retorna usuário relacional sem credencial ao JavaScript", async (t) => {
   const originalFind = userRepository.findByEmail;
   const originalSecret = process.env.JWT_SECRET;
   t.after(() => {
@@ -106,7 +85,8 @@ test("login retorna JWT e usuário relacional sem senha", async (t) => {
     coordinatedGroups: [],
   });
   const result = await userService.login({ email: "bruno@example.com", password: "Teste@123" });
-  assert.equal(jwt.verify(result.token, process.env.JWT_SECRET).id, 7);
+  assert.equal(result.token, undefined);
+  assert.equal(result.user.id, 7);
   assert.equal(result.user.role, "USER");
   assert.equal(result.user.passwordHash, undefined);
   assert.equal(result.user.grupo, "TI");

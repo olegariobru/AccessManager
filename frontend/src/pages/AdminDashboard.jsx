@@ -310,7 +310,7 @@ function AccessModal({ title, value, options, saving, showIdentity, onChange, on
           {showIdentity && <>
             <label>Nome<input required value={value.name} onChange={(event) => onChange({ ...value, name: event.target.value })} /></label>
             <label>E-mail<input required type="email" value={value.email} onChange={(event) => onChange({ ...value, email: event.target.value })} /></label>
-            <label>Senha<input required type="password" minLength="8" value={value.password} onChange={(event) => onChange({ ...value, password: event.target.value })} /></label>
+            <label>Senha<input required type="password" minLength="12" value={value.password} onChange={(event) => onChange({ ...value, password: event.target.value })} /></label>
           </>}
           <label>Perfil<select value={value.roleCode} onChange={(event) => onChange({ ...value, roleCode: event.target.value })}>
             {options.roles.map((role) => <option key={role.id} value={role.code}>{roleLabels[role.code]}</option>)}

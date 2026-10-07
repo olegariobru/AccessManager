@@ -1,6 +1,8 @@
 const prisma = require("../config/prisma");
 
 const ACTION_DESCRIPTIONS = {
+  LOGIN_SUCCEEDED: "Login realizado",
+  SESSION_ENDED: "Sessão encerrada",
   USER_CREATED: "Usuário criado",
   USER_ACCESS_UPDATED: "Acesso do usuário atualizado",
   USER_DEACTIVATED: "Usuário inativado",
