@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="container footer-inner">
         <Logo />
-        <p>© {new Date().getFullYear()} ASJCOESP, DESENVOLVIDO POR BRUNO OLEGÁRIO.</p>
+        <p>© {new Date().getFullYear()} ASJCOESP · Portal SERVNET<br /><span>Desenvolvido por Bruno Olegário</span></p>
       </div>
     </footer>
   );

@@ -182,8 +182,8 @@ export function DocumentCapture() {
         <aside className="dashboard-panel document-security-note">
           <FileKey2 size={26} />
           <h2>Entrega privada</h2>
-          <p>Somente RH ou Contabilidade publica. O cliente não envia nem altera documentos: pode apenas consultar e capturar os arquivos associados ao próprio cadastro.</p>
-          <ul><li>PDF validado no servidor</li><li>Nome interno aleatório</li><li>Download autenticado e auditado</li></ul>
+          <p>Confira o cliente e a competência antes de publicar. O documento ficará disponível apenas para a conta selecionada.</p>
+          <ul><li>Arquivos em PDF de até 10 MB</li><li>Publicação por RH ou Contabilidade</li><li>Consulta e download com acesso pessoal</li></ul>
         </aside>
       </section>
 
