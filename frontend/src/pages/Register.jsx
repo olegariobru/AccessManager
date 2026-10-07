@@ -63,7 +63,7 @@ export function Register() {
 
   return (
     <AuthCard
-      eyebrow="Comece agora"
+      eyebrow="Cadastro no SERVNET"
       title="Crie sua conta"
       description="Grupo e cargo usam os cadastros oficiais da organização."
       footerText="Já possui acesso?"

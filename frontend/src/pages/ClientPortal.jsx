@@ -89,8 +89,8 @@ export function ClientPortal() {
 
   return (
     <DashboardLayout
-      title="Cliente"
-      description={`Consulte e capture os documentos privados disponíveis para ${user?.name || "sua conta"}.`}
+      title="Meus documentos"
+      description={`Consulte e baixe os documentos disponíveis para ${user?.name || "sua conta"}.`}
     >
       <section className="metric-grid">
         <article className="metric-card"><span className="metric-icon"><Banknote size={22} /></span><div><span>Holerites</span><strong>{counts.payslips}</strong></div></article>
@@ -109,7 +109,7 @@ export function ClientPortal() {
             return <article className="document-card" key={key}>
               <div className="document-card-icon">{iconFor(item.type)}</div>
               <div className="document-card-body"><span className={`request-type request-${item.type === "ITAU_BANK_SLIP" ? "bank-slip" : item.type.toLowerCase()}`}>{labels[item.type]}</span><h2>{item.type === "PAYSLIP" ? labels[item.type] : item.title}</h2><p>{details(item)}</p><small>{item.file?.originalName} · publicado em {formatDate(item.publishedAt)}</small></div>
-              <Button className="button-secondary button-small" type="button" loading={downloading === key} onClick={() => download(item)}><Download size={16} /> Capturar PDF</Button>
+              <Button className="button-secondary button-small" type="button" loading={downloading === key} onClick={() => download(item)}><Download size={16} /> Baixar PDF</Button>
             </article>;
           })}</div>
         )}

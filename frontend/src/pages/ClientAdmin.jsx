@@ -99,7 +99,7 @@ export function ClientAdmin() {
         <aside className="dashboard-panel document-security-note">
           <ShieldCheck size={26} />
           <h2>Cadastro protegido</h2>
-          <p>O CPF é armazenado para identificação, mas a API e a tela exibem apenas uma versão mascarada. A senha é salva somente como hash.</p>
+          <p>O CPF aparece parcialmente oculto para proteger a identificação do cliente. Cada conta tem acesso apenas aos seus próprios documentos.</p>
           <ul><li>Perfil separado de funcionários</li><li>Acesso somente aos próprios arquivos</li><li>Troca obrigatória da senha inicial</li></ul>
         </aside>
       </section>
@@ -110,17 +110,17 @@ export function ClientAdmin() {
           <Button className="button-secondary button-small" type="button" loading={loading} onClick={() => loadClients()}><RefreshCw size={16} /> Atualizar</Button>
         </div>
         {!loading && (clients.length === 0 ? <p className="empty-state">Nenhum cliente cadastrado.</p> : (
-          <div className="users-table-wrap">
+          <div className="users-table-wrap" role="region" aria-label="Tabela de clientes" tabIndex={0}>
             <table className="users-table client-table">
               <thead><tr><th>Nome completo</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Nascimento</th><th>Acesso</th></tr></thead>
               <tbody>{clients.map((client) => (
                 <tr key={client.id}>
-                  <td>{client.fullName}</td>
-                  <td>{client.cpfMasked}</td>
-                  <td>{client.phone || "—"}</td>
-                  <td>{client.email}</td>
-                  <td>{displayDate(client.birthDate)}</td>
-                  <td><span className={`status-badge ${client.mustChangePassword ? "status-pending" : "status-published"}`}>{client.mustChangePassword ? "Troca pendente" : "Ativo"}</span></td>
+                  <td data-label="Nome completo">{client.fullName}</td>
+                  <td data-label="CPF">{client.cpfMasked}</td>
+                  <td data-label="Telefone">{client.phone || "—"}</td>
+                  <td data-label="E-mail">{client.email}</td>
+                  <td data-label="Nascimento">{displayDate(client.birthDate)}</td>
+                  <td data-label="Acesso"><span className={`status-badge ${client.mustChangePassword ? "status-pending" : "status-published"}`}>{client.mustChangePassword ? "Troca pendente" : "Ativo"}</span></td>
                 </tr>
               ))}</tbody>
             </table>

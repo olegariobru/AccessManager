@@ -11,6 +11,14 @@ const roleLabels = {
   USER: "Funcionário",
 };
 
+const requestStatusLabels = {
+  PENDING: "Aguardando coordenador",
+  PENDING_HR: "Aguardando RH",
+  APPROVED: "Férias marcadas",
+  REJECTED: "Recusada",
+  CANCELLED: "Cancelada",
+};
+
 export function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -162,7 +170,7 @@ export function AdminDashboard() {
   return (
     <DashboardLayout
       title="Painel administrativo"
-      description="Gestão relacional de usuários, perfis, cargos, grupos e solicitações."
+      description="Gerencie os acessos da equipe e acompanhe as solicitações da associação."
     >
       <section className="metric-grid">
         <Metric icon={<Users size={22} />} label="Usuários ativos" value={users.length} />
@@ -197,7 +205,7 @@ export function AdminDashboard() {
           </div>
         </div>
         {!loading && (
-          <div className="users-table-wrap">
+          <div className="users-table-wrap" role="region" aria-label="Tabela de usuários" tabIndex={0}>
             {users.length === 0 ? (
               <p className="empty-state">{appliedSearch ? `Nenhum usuário encontrado para "${appliedSearch}".` : "Nenhum usuário ativo."}</p>
             ) : <table className="users-table">
@@ -205,12 +213,12 @@ export function AdminDashboard() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td><span className={`role-badge role-${user.role.toLowerCase()}`}>{roleLabels[user.role]}</span></td>
-                    <td>{user.position?.name || user.cargo || "—"}</td>
-                    <td>{user.group?.name || user.grupo || "—"}</td>
-                    <td><div className="table-actions">
+                    <td data-label="Nome">{user.name}</td>
+                    <td data-label="E-mail">{user.email}</td>
+                    <td data-label="Perfil"><span className={`role-badge role-${user.role.toLowerCase()}`}>{roleLabels[user.role]}</span></td>
+                    <td data-label="Cargo">{user.position?.name || user.cargo || "—"}</td>
+                    <td data-label="Grupo">{user.group?.name || user.grupo || "—"}</td>
+                    <td data-label="Ações"><div className="table-actions">
                       <button className="table-action" type="button" onClick={() => setEditing(accessForm(user))}>Editar</button>
                       <button className="table-action table-action-key" type="button" onClick={() => setResetting({ userId: user.id, userName: user.name, password: "" })}><KeyRound size={14} /> Redefinir senha</button>
                       <button className="table-action table-action-danger" type="button" onClick={() => deactivateUser(user)}>Inativar</button>
@@ -246,7 +254,7 @@ export function AdminDashboard() {
               <article className="request-item request-item-review" key={request.id}>
                 <span className="request-type request-vacation">Férias</span>
                 <div><strong>{request.userName}</strong><span>{request.userGroup} · {request.days} dias</span></div>
-                <span className={`status-badge status-${request.status.toLowerCase()}`}>{request.status}</span>
+                <span className={`status-badge status-${request.status.toLowerCase()}`}>{requestStatusLabels[request.status] || request.status}</span>
                 {request.status === "PENDING" && <div className="review-actions">
                   <button className="icon-button approve" type="button" title="Aprovar" onClick={() => reviewRequest(request.id, "APPROVED")}><Check size={17} /></button>
                   <button className="icon-button reject" type="button" title="Recusar" onClick={() => reviewRequest(request.id, "REJECTED")}><X size={17} /></button>
@@ -297,7 +305,7 @@ function AccessModal({ title, value, options, saving, showIdentity, onChange, on
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="modal-card" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="section-heading"><div><ShieldCheck size={19} /><div><strong>{title}</strong><span>Use os cadastros relacionais existentes</span></div></div></div>
+        <div className="section-heading"><div><ShieldCheck size={19} /><div><strong>{title}</strong><span>Selecione o perfil, cargo e grupo do usuário</span></div></div></div>
         <form className="request-form" onSubmit={onSubmit}>
           {showIdentity && <>
             <label>Nome<input required value={value.name} onChange={(event) => onChange({ ...value, name: event.target.value })} /></label>

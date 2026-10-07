@@ -23,6 +23,12 @@ const statusLabels = {
   CANCELLED: "Cancelada",
 };
 
+const payslipStatusLabels = {
+  DRAFT: "Rascunho",
+  PUBLISHED: "Publicado",
+  ARCHIVED: "Arquivado",
+};
+
 function nextWeekdayDate(day) {
   const today = new Date();
   let candidate = new Date(today.getFullYear(), today.getMonth(), day);
@@ -208,7 +214,7 @@ export function UserDashboard() {
               <article className="request-item request-item-review" key={payslip.id}>
                 <span className="request-type request-payslip">Holerite</span>
                 <div><strong>{String(payslip.month).padStart(2, "0")}/{payslip.year}</strong><span>{payslip.file?.originalName || "Arquivo privado"}</span></div>
-                <span className={`status-badge status-${payslip.status.toLowerCase()}`}>{payslip.status}</span>
+                <span className={`status-badge status-${payslip.status.toLowerCase()}`}>{payslipStatusLabels[payslip.status] || payslip.status}</span>
                 {payslip.file && <Button className="button-secondary button-small" type="button" loading={downloading === payslip.id} onClick={() => downloadPayslip(payslip)}><Download size={15} /> Baixar</Button>}
               </article>
             ))}
