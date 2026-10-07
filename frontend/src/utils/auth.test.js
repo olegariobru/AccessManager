@@ -13,6 +13,7 @@ function createStorage() {
 
 test.beforeEach(() => {
   globalThis.localStorage = createStorage();
+  clearSession();
 });
 
 test("normaliza o perfil e escolhe a área correta", () => {
@@ -31,47 +32,25 @@ test("direciona senha temporária para troca obrigatória", () => {
   assert.equal(roleDestination({ role: "ADMIN", mustChangePassword: true }), "/alterar-senha");
 });
 
-test("salva, recupera e encerra a sessão", () => {
-  saveSession("token-valido", { id: 1, role: "ADMIN" });
-  assert.deepEqual(getSession(), {
-    token: "token-valido",
-    user: { id: 1, role: "ADMIN" },
-  });
-
+test("usuário fica somente em memória, sem credenciais persistidas", () => {
+  saveSession({ id: 1, role: "ADMIN" });
+  assert.deepEqual(getSession(), { user: { id: 1, role: "ADMIN" } });
+  assert.equal(localStorage.getItem("accessmanager:token"), null);
+  assert.equal(localStorage.getItem("accessmanager:user"), null);
   clearSession();
   assert.equal(getSession(), null);
 });
-
-test("descarta uma sessão com usuário inválido", () => {
-  localStorage.setItem("accessmanager:token", "token-valido");
-  localStorage.setItem("accessmanager:user", "{json-invalido");
+test("armazenamento antigo não estabelece sessão", () => {
+  localStorage.setItem("accessmanager:token", "token-antigo");
+  localStorage.setItem("accessmanager:user", JSON.stringify({ id: 1, role: "ADMIN" }));
   assert.equal(getSession(), null);
 });
-
-test("descarta uma sessão com usuário incompleto", () => {
-  localStorage.setItem("accessmanager:token", "token-valido");
-  localStorage.setItem("accessmanager:user", JSON.stringify({ id: 1 }));
-
-  assert.equal(getSession(), null);
-  assert.equal(localStorage.getItem("accessmanager:token"), null);
+test("não aceita usuário sem id ou perfil", () => {
+  assert.throws(() => saveSession({ role: "USER" }), /Sessão inválida/);
+  assert.throws(() => saveSession({ id: 1 }), /Sessão inválida/);
 });
-
-test("não salva sessão sem token, id ou perfil", () => {
-  assert.throws(
-    () => saveSession("", { id: 1, role: "USER" }),
-    /Sessão inválida/,
-  );
-  assert.throws(
-    () => saveSession("token", { role: "USER" }),
-    /Sessão inválida/,
-  );
-});
-
-test("atualiza os dados do usuário sem perder o token", () => {
-  saveSession("token-valido", { id: 1, role: "USER" });
+test("atualiza os dados somente em memória", () => {
+  saveSession({ id: 1, role: "USER" });
   updateSessionUser({ id: 1, role: "ADMIN" });
-  assert.deepEqual(getSession(), {
-    token: "token-valido",
-    user: { id: 1, role: "ADMIN" },
-  });
+  assert.deepEqual(getSession(), { user: { id: 1, role: "ADMIN" } });
 });

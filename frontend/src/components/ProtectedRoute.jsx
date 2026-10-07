@@ -11,20 +11,17 @@ import {
 export function ProtectedRoute({ allowedRoles, requireHr = false, requireDocumentPublisher = false }) {
   const location = useLocation();
   const [session, setSession] = useState(() => getSession());
-  const [checking, setChecking] = useState(Boolean(session));
-  const sessionToken = session?.token;
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!sessionToken) {
-      setChecking(false);
-      return undefined;
-    }
     let active = true;
+    const sessionEnded = () => { if (active) setSession(null); };
+    globalThis.addEventListener("accessmanager:session-ended", sessionEnded);
     api.get("/auth/me")
       .then(({ data }) => {
         if (!active) return;
         updateSessionUser(data.user);
-        setSession((current) => ({ ...current, user: data.user }));
+        setSession({ user: data.user });
       })
       .catch(() => {
         if (active) setSession(null);
@@ -32,8 +29,11 @@ export function ProtectedRoute({ allowedRoles, requireHr = false, requireDocumen
       .finally(() => {
         if (active) setChecking(false);
       });
-    return () => { active = false; };
-  }, [sessionToken]);
+    return () => {
+      active = false;
+      globalThis.removeEventListener("accessmanager:session-ended", sessionEnded);
+    };
+  }, []);
 
   if (checking) return <p className="route-loading" role="status">Validando sessão...</p>;
   if (!session) return <Navigate to="/login" replace state={{ from: location }} />;

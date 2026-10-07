@@ -1,6 +1,5 @@
 const organizationRepository = require("../repositories/organization.repository");
 const userRepository = require("../repositories/user.repository");
-const securityRepository = require("../repositories/security.repository");
 
 function httpError(message, statusCode) {
   const error = new Error(message);
@@ -25,27 +24,30 @@ async function assignCoordinatorGroup(userId, groupId, actor) {
   if (!group) throw httpError("Grupo não encontrado ou inativo", 404);
 
   try {
-    const link = await organizationRepository.assignCoordinatorGroup(userId, groupId);
-    await securityRepository.audit({
-      actorId: actor.id,
-      action: "COORDINATOR_GROUP_ASSIGNED",
-      entityType: "GroupCoordinator",
-      entityId: `${userId}:${groupId}`,
-      changes: { userId: Number(userId), groupId: Number(groupId) },
-    });
+    const link = await organizationRepository.assignCoordinatorGroup(
+      userId,
+      groupId,
+      {
+        actorId: actor.id,
+        action: "COORDINATOR_GROUP_ASSIGNED",
+        entityType: "GroupCoordinator",
+        entityId: `${userId}:${groupId}`,
+        changes: { userId: Number(userId), groupId: Number(groupId) },
+      },
+    );
     return link;
   } catch (error) {
-    if (error.code === "P2002") throw httpError("Coordenador já vinculado a este grupo", 409);
+    if (error.code === "P2002")
+      throw httpError("Coordenador já vinculado a este grupo", 409);
     throw error;
   }
 }
 
 async function removeCoordinatorGroup(userId, groupId, actor) {
-  if (!await organizationRepository.coordinatorHasGroup(userId, groupId)) {
+  if (!(await organizationRepository.coordinatorHasGroup(userId, groupId))) {
     throw httpError("Vínculo não encontrado", 404);
   }
-  await organizationRepository.removeCoordinatorGroup(userId, groupId);
-  await securityRepository.audit({
+  await organizationRepository.removeCoordinatorGroup(userId, groupId, {
     actorId: actor.id,
     action: "COORDINATOR_GROUP_REMOVED",
     entityType: "GroupCoordinator",

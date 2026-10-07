@@ -1,3 +1,4 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 const clientInclude = {
@@ -74,6 +75,7 @@ async function createWithAccount({
   phone,
   birthDate,
   createdById,
+  auditEvent,
 }) {
   return prisma.$transaction(async (tx) => {
     const clientRole = await tx.role.findUnique({ where: { code: "CLIENT" } });
@@ -105,6 +107,7 @@ async function createWithAccount({
       },
       include: clientInclude,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: profile.id, changes: { userId: user.id } }, tx);
     return toClientDto(profile, { includePersonalData: true });
   });
 }

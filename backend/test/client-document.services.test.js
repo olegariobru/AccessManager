@@ -81,10 +81,12 @@ test("upload de IRPF persiste PDF privado e não audita a chave de armazenamento
     checksum: "abc",
   });
   privateFileService.removePdf = async () => undefined;
-  clientDocumentRepository.save = async ({ document }) => ({
+  clientDocumentRepository.save = async ({ document, auditEvent }) => {
+    await securityRepository.audit(auditEvent);
+    return ({
     document: { id: 11, ...document },
     replacedStorageKey: null,
-  });
+  }); };
   let audited;
   securityRepository.audit = async (value) => { audited = value; };
 
@@ -115,8 +117,8 @@ test("RH publica IRPF, mas boleto Itaú é exclusivo da Contabilidade", async ()
   );
 });
 
-test("validação de PDF rejeita extensão disfarçada", () => {
-  assert.throws(
+test("validação de PDF rejeita extensão disfarçada", async () => {
+  await assert.rejects(
     () => privateFileService.validatePdf(Buffer.from("arquivo executável")),
     (error) => error.statusCode === 415,
   );

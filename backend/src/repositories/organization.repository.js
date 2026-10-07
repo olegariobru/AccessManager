@@ -1,3 +1,4 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 async function listOptions() {
@@ -48,18 +49,25 @@ async function listCoordinatorGroups(userId) {
   });
 }
 
-async function assignCoordinatorGroup(userId, groupId) {
-  return prisma.groupCoordinator.create({
-    data: { userId: Number(userId), groupId: Number(groupId) },
-    include: { group: true },
+async function assignCoordinatorGroup(userId, groupId, auditEvent) {
+  return prisma.$transaction(async (tx) => {
+    const link = await tx.groupCoordinator.create({
+      data: { userId: Number(userId), groupId: Number(groupId) }, include: { group: true },
+    });
+    await tx.user.update({ where: { id: Number(userId) }, data: { tokenVersion: { increment: 1 } } });
+    if (auditEvent) await securityRepository.audit(auditEvent, tx);
+    return link;
   });
 }
 
-async function removeCoordinatorGroup(userId, groupId) {
-  return prisma.groupCoordinator.delete({
-    where: {
-      userId_groupId: { userId: Number(userId), groupId: Number(groupId) },
-    },
+async function removeCoordinatorGroup(userId, groupId, auditEvent) {
+  return prisma.$transaction(async (tx) => {
+    const link = await tx.groupCoordinator.delete({
+      where: { userId_groupId: { userId: Number(userId), groupId: Number(groupId) } },
+    });
+    await tx.user.update({ where: { id: Number(userId) }, data: { tokenVersion: { increment: 1 } } });
+    if (auditEvent) await securityRepository.audit(auditEvent, tx);
+    return link;
   });
 }
 

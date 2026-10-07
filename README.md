@@ -19,7 +19,8 @@ Processos internos frequentemente ficam espalhados entre planilhas, mensagens e 
 
 ### Autenticação e segurança
 
-- Login com JWT e senhas protegidas com `bcrypt`.
+- Login com sessões revogáveis em cookie HttpOnly e senhas novas protegidas com Argon2id.
+- Cadastro exclusivamente administrativo; sem criação pública de contas.
 - Autorização recarregada do banco a cada requisição autenticada.
 - Invalidação de sessões anteriores após alteração ou redefinição de senha.
 - Rate limiting específico para login e recuperação de senha.
@@ -94,7 +95,7 @@ Mais detalhes estão em [docs/database.md](docs/database.md).
 | Camada | Tecnologias |
 | --- | --- |
 | Frontend | React 19, Vite, React Router, Axios, Lucide React |
-| Backend | Node.js, Express 5, JWT, bcrypt, Helmet, Nodemailer |
+| Backend | Node.js, Express 5, Redis, Argon2id, Helmet, Nodemailer |
 | Banco de dados | PostgreSQL, Prisma ORM e migrations SQL |
 | Qualidade | Node Test Runner, ESLint e build de produção com Vite |
 
@@ -147,7 +148,8 @@ Copie `backend/.env.example` para `backend/.env` e ajuste pelo menos:
 
 ```env
 DATABASE_URL="postgresql://usuario:senha@localhost:5432/access_manager"
-JWT_SECRET="defina-um-segredo-longo-e-aleatorio"
+NODE_ENV="development"
+# REDIS_URL="redis://localhost:6379/0" # obrigatório em produção
 PORT=3000
 CORS_ORIGIN="http://localhost:5173"
 # Opcional: diretório privado dos PDFs
@@ -203,6 +205,7 @@ Backend:
 ```bash
 cd backend
 npm test
+npm run lint
 npm run db:validate
 ```
 
@@ -217,9 +220,11 @@ npm run build
 
 Os testes cobrem regras críticas como autorização, isolamento por grupo e por cliente, fluxo de férias, redefinição de senha, auditoria, holerites, IRPF, boletos e validações de PDF.
 
+Para implantação e testes de segurança com PostgreSQL/Redis isolados, consulte [Segurança e sessões](docs/security/README.md). Produção exige HTTPS, Redis compartilhado e portal/API no mesmo site.
+
 ## Decisões técnicas relevantes
 
-- **Permissões fora do JWT:** o token identifica a sessão, mas o acesso atual é recarregado do banco para evitar permissões desatualizadas.
+- **Sessões no servidor:** o navegador recebe apenas um cookie HttpOnly; permissões são recarregadas do banco, e senha/acesso alterados revogam sessões pela versão da conta. Redis é obrigatório em produção.
 - **Soft delete:** usuários são inativados em vez de apagados, preservando férias, holerites e auditoria.
 - **Auditoria enriquecida:** além do ID relacional, nome e e-mail do ator são preservados como snapshot.
 - **Transações:** operações que alteram múltiplas relações são executadas atomicamente.
@@ -232,7 +237,7 @@ Os testes cobrem regras críticas como autorização, isolamento por grupo e por
 
 ## Próximas evoluções
 
-- Sessões revogáveis com refresh token em cookie HttpOnly.
+- Autenticação multifator para contas privilegiadas.
 - Cadastro organizacional por convites de uso único.
 - Documentação OpenAPI/Swagger.
 - Paginação consistente nas listagens administrativas.

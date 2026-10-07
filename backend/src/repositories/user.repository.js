@@ -1,14 +1,16 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 const accessInclude = {
   roles: { include: { role: true } },
   memberships: {
-    where: { endsAt: null },
+    where: { endsAt: null, group: { isActive: true } },
     include: { group: true, position: true },
     orderBy: [{ isPrimary: "desc" }, { startsAt: "desc" }],
     take: 1,
   },
   coordinatedGroups: {
+    where: { group: { isActive: true } },
     include: { group: true },
   },
 };
@@ -39,9 +41,9 @@ function isAccountingGroup(group) {
 function toPublicUser(user) {
   if (!user) return null;
   const roleCodes = (user.roles || []).map(({ role }) => role.code);
-  const membership = user.memberships?.[0];
+  const membership = user.memberships?.find(({ group }) => group?.isActive !== false);
   const { passwordHash: _passwordHash, roles: _roles, memberships: _memberships, coordinatedGroups, ...identity } = user;
-  const managedGroups = coordinatedGroups || [];
+  const managedGroups = (coordinatedGroups || []).filter(({ group }) => group?.isActive !== false);
   const isHrMember = isHumanResourcesGroup(membership?.group);
   const isHr = isHrMember
     || managedGroups.some(({ group }) => isHumanResourcesGroup(group));
@@ -125,9 +127,11 @@ async function createWithAccess({
   email,
   passwordHash,
   status = "ACTIVE",
+  mustChangePassword = false,
   roleCodes = ["USER"],
   groupId,
   positionId,
+  auditEvent,
 }, transaction = prisma) {
   const operation = async (tx) => {
     const { roles } = await assertOrganization(tx, groupId, positionId, roleCodes);
@@ -137,6 +141,7 @@ async function createWithAccess({
         email,
         passwordHash,
         status,
+        mustChangePassword,
         roles: {
           create: roles.map(({ id }) => ({ roleId: id })),
         },
@@ -151,6 +156,7 @@ async function createWithAccess({
       await tx.groupCoordinator.create({ data: { userId: user.id, groupId } });
       user.coordinatedGroups = [{ userId: user.id, groupId, group: user.memberships[0].group }];
     }
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: user.id }, tx);
     return withMasterGroupScope(toPublicUser(user), tx);
   };
 
@@ -191,7 +197,7 @@ async function findAll(search = "") {
   } : user);
 }
 
-async function updateAccess(id, { roleCode, groupId, positionId }) {
+async function updateAccess(id, { roleCode, groupId, positionId }, auditEvent) {
   return prisma.$transaction(async (tx) => {
     const userId = Number(id);
     const current = await tx.user.findFirst({ where: { id: userId, deletedAt: null } });
@@ -232,17 +238,19 @@ async function updateAccess(id, { roleCode, groupId, positionId }) {
       await tx.groupCoordinator.deleteMany({ where: { userId } });
     }
 
+    await tx.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } });
+    if (auditEvent) await securityRepository.audit(auditEvent, tx);
     const updated = await tx.user.findUnique({ where: { id: userId }, include: accessInclude });
     return withMasterGroupScope(toPublicUser(updated), tx);
   });
 }
 
-async function deactivate(id) {
+async function deactivate(id, auditEvent) {
   return prisma.$transaction(async (tx) => {
     const userId = Number(id);
     const user = await tx.user.update({
       where: { id: userId },
-      data: { status: "INACTIVE", deletedAt: new Date() },
+      data: { status: "INACTIVE", deletedAt: new Date(), tokenVersion: { increment: 1 } },
       include: accessInclude,
     });
     await tx.userMembership.updateMany({
@@ -250,19 +258,29 @@ async function deactivate(id) {
       data: { endsAt: new Date(), isPrimary: false },
     });
     await tx.groupCoordinator.deleteMany({ where: { userId } });
+    if (auditEvent) await securityRepository.audit(auditEvent, tx);
     return toPublicUser(user);
   });
 }
 
-async function changePassword(id, passwordHash) {
-  return prisma.user.update({
-    where: { id: Number(id) },
-    data: { passwordHash, mustChangePassword: false, tokenVersion: { increment: 1 } },
-    select: { id: true, tokenVersion: true },
+async function changePassword(id, passwordHash, auditEvent, expectedVersion) {
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.user.update({
+      where: { id: Number(id), ...(expectedVersion != null ? { tokenVersion: expectedVersion } : {}) },
+      data: { passwordHash, mustChangePassword: false, tokenVersion: { increment: 1 } },
+      select: { id: true, tokenVersion: true },
+    });
+    if (auditEvent) await securityRepository.audit(auditEvent, tx);
+    return result;
   });
 }
 
+async function upgradePasswordHash(id, previousHash, passwordHash) {
+  return prisma.user.updateMany({ where: { id, passwordHash: previousHash }, data: { passwordHash } });
+}
+
 module.exports = {
+  upgradePasswordHash,
   createWithAccess,
   findByEmail,
   findById,

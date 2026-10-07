@@ -5,7 +5,6 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
 import { UserDashboard } from "./pages/UserDashboard";
 import { CoordinatorDashboard } from "./pages/CoordinatorDashboard";
 import { HrDashboard } from "./pages/HrDashboard";
@@ -20,7 +19,6 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Register />} />
         <Route path="/esqueci-minha-senha" element={<ForgotPassword />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>

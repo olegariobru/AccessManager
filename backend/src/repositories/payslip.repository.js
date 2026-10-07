@@ -1,3 +1,4 @@
+const securityRepository = require("./security.repository");
 const prisma = require("../config/prisma");
 
 const include = {
@@ -46,6 +47,7 @@ async function upsert({
   netAmount,
   file,
   publisherId,
+  auditEvent,
   publish,
 }) {
   return prisma.$transaction(async (tx) => {
@@ -78,6 +80,7 @@ async function upsert({
       },
       include,
     });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: payslip.id, changes: { ...auditEvent.changes, status: payslip.status } }, tx);
     return toPayslipDto(payslip);
   });
 }
@@ -90,6 +93,7 @@ async function upsertWithFile({
   netAmount,
   file,
   publisherId,
+  auditEvent,
 }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.payslip.findUnique({
@@ -121,6 +125,7 @@ async function upsertWithFile({
       include,
     });
     if (current?.fileId) await tx.fileAsset.delete({ where: { id: current.fileId } });
+    if (auditEvent) await securityRepository.audit({ ...auditEvent, entityId: payslip.id }, tx);
     return {
       payslip: toPayslipDto(payslip),
       replacedStorageKey: current?.file?.storageKey || null,

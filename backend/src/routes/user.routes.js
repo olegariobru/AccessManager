@@ -9,12 +9,14 @@ const {
 
 const router = express.Router();
 
-router.post("/register", validateCredentials, userController.register);
+router.get("/csrf", userController.csrf);
 router.post("/login", validateCredentials, userController.login);
 router.post("/forgot-password", userController.forgotPassword);
-router.get("/organization-options", organizationController.listOptions);
+
 
 router.use(authMiddleware);
+router.post("/logout", userController.logout);
+router.get("/organization-options", authorizeRoles("ADMIN"), organizationController.listOptions);
 router.get("/me", userController.me);
 router.get("/profile", userController.me);
 router.post("/change-password", userController.changePassword);

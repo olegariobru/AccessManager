@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const jwt = require("jsonwebtoken");
+const sessions = require("../src/security/session");
 const userRepository = require("../src/repositories/user.repository");
 const {
   authMiddleware,
@@ -17,53 +17,51 @@ function response() {
     body: null,
     status(code) { this.statusCode = code; return this; },
     json(body) { this.body = body; return this; },
+    clearCookie() {},
   };
 }
 
-test("aceita JWT válido e recarrega permissões relacionais do banco", async (t) => {
-  const originalUser = userRepository.getAccessContext;
-  const originalSecret = process.env.JWT_SECRET;
-  t.after(() => {
-    userRepository.getAccessContext = originalUser;
-    process.env.JWT_SECRET = originalSecret;
-  });
-  process.env.JWT_SECRET = "segredo-de-teste";
-  userRepository.getAccessContext = async () => ({
-    id: 1,
-    role: "ADMIN",
-    roles: ["ADMIN"],
-    groupIds: [],
-  });
-  const token = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
-  const req = { headers: { authorization: `Bearer ${token}` } };
-  const res = response();
-  let called = false;
-  await authMiddleware(req, res, () => { called = true; });
-  assert.equal(called, true);
+test("sessão recarrega permissões relacionais do banco", async (t) => {
+  const original = userRepository.getAccessContext;
+  t.after(() => { userRepository.getAccessContext = original; });
+  userRepository.getAccessContext = async () => ({ id: 1, role: "ADMIN", roles: ["ADMIN"], tokenVersion: 2 });
+  const req = { session: { userId: 1, tokenVersion: 2 } };
+  let allowed = false;
+  await authMiddleware(req, response(), () => { allowed = true; });
+  assert.equal(allowed, true);
   assert.equal(req.user.role, "ADMIN");
 });
-
-test("rejeita token quando usuário está inativo", async (t) => {
-  const originalUser = userRepository.getAccessContext;
-  t.after(() => { userRepository.getAccessContext = originalUser; });
-  userRepository.getAccessContext = async () => null;
-  const token = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
-  const res = response();
-  await authMiddleware({ headers: { authorization: `Bearer ${token}` } }, res, () => assert.fail());
-  assert.equal(res.statusCode, 401);
+test("usuário inativo e versão revogada não autenticam", async (t) => {
+  const original = userRepository.getAccessContext;
+  t.after(() => { userRepository.getAccessContext = original; });
+  for (const user of [null, { id: 1, tokenVersion: 3 }]) {
+    userRepository.getAccessContext = async () => user;
+    const res = response();
+    await authMiddleware({ session: { userId: 1, tokenVersion: 2 } }, res, () => assert.fail());
+    assert.equal(res.statusCode, 401);
+  }
 });
-
-test("rejeita requisição sem token e token mal formatado", async () => {
-  const missing = response();
-  const malformed = response();
-  await authMiddleware({ headers: {} }, missing, () => assert.fail());
-  await authMiddleware(
-    { headers: { authorization: "Bearer token extra" } },
-    malformed,
-    () => assert.fail(),
-  );
-  assert.equal(missing.statusCode, 401);
-  assert.equal(malformed.statusCode, 401);
+test("Bearer antigo, cookie ausente e duplicado não autenticam", async () => {
+  for (const headers of [{}, { authorization: "Bearer token-antigo" },
+    { cookie: "accessmanager-session=" + "a".repeat(64) + "; accessmanager-session=" + "a".repeat(64) }]) {
+    const res = response();
+    await authMiddleware({ headers }, res, () => assert.fail());
+    assert.equal(res.statusCode, 401);
+  }
+  assert.equal(sessions.readCookie({ headers: { cookie: "accessmanager-session=inválido" } }), null);
+});
+test("senha temporária bloqueia a API e libera troca, perfil e logout", async (t) => {
+  const original = userRepository.getAccessContext;
+  t.after(() => { userRepository.getAccessContext = original; });
+  userRepository.getAccessContext = async () => ({ id: 1, tokenVersion: 0, mustChangePassword: true });
+  for (const [baseUrl, path, status] of [["/dashboard", "/requests", 403], ["/auth", "/users", 403],
+    ["/auth", "/change-password", 200], ["/auth", "/me", 200], ["/auth", "/logout", 200]]) {
+    const res = response();
+    let allowed = false;
+    await authMiddleware({ session: { userId: 1, tokenVersion: 0 }, baseUrl, path }, res, () => { allowed = true; });
+    assert.equal(res.statusCode, status);
+    assert.equal(allowed, status === 200);
+  }
 });
 
 test("permite ADMIN e bloqueia USER na rota administrativa", () => {

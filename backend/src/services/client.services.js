@@ -1,6 +1,5 @@
 const { hashPassword } = require("../utils/hash");
 const clientRepository = require("../repositories/client.repository");
-const securityRepository = require("../repositories/security.repository");
 const userRepository = require("../repositories/user.repository");
 
 function httpError(message, statusCode, code) {
@@ -84,6 +83,7 @@ async function createClient(payload, actor) {
       ...data,
       passwordHash: await hashPassword(data.password),
       createdById: actor.id,
+      auditEvent: { actorId: actor.id, action: "CLIENT_CREATED", entityType: "ClientProfile" },
     });
   } catch (error) {
     if (error.code === "P2002") {
@@ -92,13 +92,7 @@ async function createClient(payload, actor) {
     throw error;
   }
 
-  await securityRepository.audit({
-    actorId: actor.id,
-    action: "CLIENT_CREATED",
-    entityType: "ClientProfile",
-    entityId: client.id,
-    changes: { userId: client.userId },
-  });
+
   return client;
 }
 

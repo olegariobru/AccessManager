@@ -24,9 +24,9 @@ export function Login() {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", form.values);
-      if (!data.token || !data.user) throw new Error("Resposta de autenticação inválida");
+      if (!data.user) throw new Error("Resposta de autenticação inválida");
 
-      saveSession(data.token, data.user);
+      saveSession(data.user);
       navigate(data.user.mustChangePassword ? "/alterar-senha" : roleDestination(data.user), { replace: true });
     } catch (error) {
       setMessage(apiErrorMessage(error, "Não foi possível entrar. Verifique os dados ou tente novamente."));
@@ -34,7 +34,8 @@ export function Login() {
   }
 
   return (
-    <AuthCard eyebrow="Acesso ao SERVNET" title="Entre na sua conta" description="Informe seu e-mail e senha para acessar os serviços da ASJCOESP." footerText="Ainda não tem uma conta?" footerLink="/cadastro" footerLabel="Cadastre-se">
+    <AuthCard eyebrow="Acesso ao SERVNET" title="Entre na sua conta" description="Informe seu e-mail e senha para acessar os serviços da ASJCOESP.">
+      <p className="form-message">O acesso é criado pela administração. Para solicitar uma conta, procure o responsável da sua organização.</p>
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <InputField id="login-email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="voce@empresa.com" value={form.values.email} onChange={form.handleChange} error={form.errors.email} />
         <InputField id="login-password" name="password" label="Senha" type="password" autoComplete="current-password" placeholder="Sua senha" value={form.values.password} onChange={form.handleChange} error={form.errors.password} />

@@ -1,4 +1,6 @@
 import { CalendarDays, ContactRound, Files, LockKeyhole, LogOut, ShieldCheck, Upload, UserRound, UsersRound } from "lucide-react";
+import { useState } from "react";
+import { api } from "../services/api";
 import { useLocation, useNavigate } from "react-router-dom";
 import { clearSession, getSession } from "../utils/auth";
 import { Logo } from "./Logo";
@@ -8,9 +10,20 @@ export function DashboardLayout({ title, description, children }) {
   const location = useLocation();
   const session = getSession();
 
-  function handleLogout() {
-    clearSession();
-    navigate("/login", { replace: true });
+  const [logoutError, setLogoutError] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
+  async function handleLogout() {
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      await api.post("/auth/logout");
+      clearSession();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      if (error.response?.status === 401) {
+        clearSession(); navigate("/login", { replace: true });
+      } else setLogoutError("Não foi possível encerrar a sessão. Tente novamente.");
+    } finally { setLoggingOut(false); }
   }
 
   const roleLabels = { ADMIN: "Administração", COORDINATOR: "Coordenação", USER: "Funcionário", CLIENT: "Cliente" };
@@ -26,7 +39,7 @@ export function DashboardLayout({ title, description, children }) {
             <strong>{session?.user.name}</strong>
             <span>{roleLabels[session?.user.role] || "Conta"}</span>
           </div>
-          <button className="button button-secondary button-small" type="button" onClick={handleLogout}>
+          <button className="button button-secondary button-small" type="button" onClick={handleLogout} disabled={loggingOut}>
             <LogOut size={17} />
             Sair
           </button>
@@ -60,6 +73,7 @@ export function DashboardLayout({ title, description, children }) {
             <h1>{title}</h1>
             <p>{description}</p>
           </div>
+          {logoutError && <p className="form-message error" role="alert">{logoutError}</p>}
           {children}
           <footer className="dashboard-footer">SERVNET / ASJCOESP <span>Portal de serviços</span></footer>
         </main>
