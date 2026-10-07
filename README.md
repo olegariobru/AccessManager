@@ -175,7 +175,7 @@ A API ficará disponível em `http://localhost:3000`.
 
 ### 3. Configure o frontend
 
-Em outro terminal:
+Em outro terminal, a partir da raiz do repositório:
 
 ```bash
 cd frontend
@@ -239,6 +239,21 @@ Os testes cobrem regras críticas como autorização, isolamento por grupo e por
 - Logs estruturados e observabilidade.
 - Pipeline de integração contínua no GitHub Actions.
 - Deploy após definição da infraestrutura.
+
+## Como contribuir
+
+Abra uma issue descrevendo o problema ou a proposta. Para enviar uma alteração:
+
+1. Crie um fork e uma branch com um nome descritivo.
+2. Mantenha a mudança focada e documente alterações de configuração ou banco.
+3. Execute os testes do backend e do frontend; quando alterar a interface, execute também lint e build.
+4. Abra um pull request com o comportamento esperado, a alteração realizada e os resultados da validação.
+
+Utilize somente dados de demonstração e não inclua credenciais, documentos ou dados pessoais reais.
+
+## Licença
+
+Ainda não há um arquivo `LICENSE` na raiz. A licença de uso e redistribuição precisa ser formalizada pelo autor; o campo de licença de um pacote não substitui essa definição para todo o repositório.
 
 ## Autor
 
