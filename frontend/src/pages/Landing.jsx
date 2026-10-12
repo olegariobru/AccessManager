@@ -1,15 +1,28 @@
-import { ArrowRight, CalendarDays, FileText, LockKeyhole, UsersRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, LockKeyhole } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const services = [
-  { number: "01", icon: CalendarDays, title: "Rotinas de trabalho", text: "Solicite férias e acompanhe cada etapa, da análise do coordenador à decisão do RH." },
-  { number: "02", icon: FileText, title: "Documentos à mão", text: "Consulte os holerites, arquivos de IRPF e boletos publicados para a sua conta." },
-  { number: "03", icon: UsersRound, title: "Gestão conectada", text: "Equipes, RH e administração reunidos em um ambiente com acesso por perfil." },
-];
-
 export function Landing() {
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+
+    setShowIntro(true);
+    const timeout = window.setTimeout(() => setShowIntro(false), 1450);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   return (
     <>
+      {showIntro && (
+        <div className="landing-intro" role="status" aria-label="Carregando SERVNET">
+          <div className="landing-intro-mark" aria-hidden="true"><span>S</span><i>N</i></div>
+          <strong>SERVNET</strong>
+          <span className="landing-intro-caption">Um espaço da ASJCOESP</span>
+          <div className="landing-intro-track" aria-hidden="true"><span /></div>
+        </div>
+      )}
       <section className="hero">
         <div className="container hero-grid">
           <div className="hero-copy">
@@ -26,24 +39,7 @@ export function Landing() {
           </aside>
         </div>
       </section>
-      <section className="services-section">
-        <div className="container">
-          <div className="services-heading"><p className="eyebrow">O que você encontra aqui</p><h2>Serviços que acompanham você.</h2></div>
-          <div className="service-grid">
-            {services.map(({ number, icon, title, text }) => {
-              const Icon = icon;
-              return (
-                <article className="service-item" key={number}>
-                  <div className="service-item-top"><Icon size={25} strokeWidth={1.5} /><span>{number}</span></div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              );
-            })}
-          </div>
-          <div className="landing-help"><span>Já tem uma conta? Acesse com seu e-mail e senha.</span><Link to="/esqueci-minha-senha">Preciso recuperar meu acesso <ArrowRight size={16} /></Link></div>
-        </div>
-      </section>
+
     </>
   );
 }

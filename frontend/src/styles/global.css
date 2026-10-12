@@ -60,17 +60,21 @@ h1, h2, h3 { color: var(--brand); }
 .institution-panel-caption strong { display: block; margin-top: 12px; font-size: 40px; letter-spacing: 4px; font-weight: 700; }
 .institution-panel-caption p { margin: 12px 0 0; color: #d1dce1; font-size: 15px; line-height: 1.7; }
 .institution-panel-index { position: absolute; top: 32px; left: 40px; color: #d2ab90; font-size: 9px; letter-spacing: 1.5px; }
-.services-section { padding: 64px 0 40px; background: white; }
-.services-heading .eyebrow { margin-bottom: 10px; }
-.services-heading h2 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.7px; }
-.service-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 36px 0 40px; }
-.service-item { padding: 4px 30px; border-left: 1px solid var(--line); }
-.service-item:first-child { padding-left: 0; border-left: 0; }
-.service-item:last-child { padding-right: 0; }
-.service-item-top { display: flex; align-items: center; justify-content: space-between; color: var(--brand); }
-.service-item-top span { color: #8a979e; font-size: 11px; font-variant-numeric: tabular-nums; }
-.service-item h3 { margin: 24px 0 10px; font-size: 19px; font-weight: 600; }
-.service-item p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
+.landing-intro { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #fff; background: var(--brand); animation: landing-intro-exit .45s ease 1s forwards; }
+.landing-intro-mark { position: relative; display: grid; place-items: center; width: 78px; height: 78px; border: 1px solid #ffffff50; border-radius: 50%; font-size: 38px; font-weight: 700; animation: landing-mark-in .65s cubic-bezier(.2,.8,.2,1) both; }
+.landing-intro-mark::before, .landing-intro-mark::after { position: absolute; inset: -9px; border: 1px solid #ffffff38; border-radius: 50%; content: ""; animation: landing-orbit 2.4s linear infinite; }
+.landing-intro-mark::after { inset: -19px; border-color: #ffffff22; animation-direction: reverse; }
+.landing-intro-mark i { color: #d8a17e; font-style: normal; }
+.landing-intro > strong { margin-top: 8px; font-size: 19px; letter-spacing: 5px; animation: landing-copy-in .55s .15s ease both; }
+.landing-intro-caption { color: #c6d4dc; font-size: 11px; letter-spacing: 1px; animation: landing-copy-in .55s .25s ease both; }
+.landing-intro-track { width: 124px; height: 2px; margin-top: 15px; overflow: hidden; background: #ffffff30; }
+.landing-intro-track span { display: block; width: 45%; height: 100%; background: #d8a17e; animation: landing-progress .85s ease-in-out both; }
+@keyframes landing-mark-in { from { opacity: 0; transform: scale(.7) rotate(-12deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes landing-copy-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes landing-orbit { to { transform: rotate(360deg); } }
+@keyframes landing-progress { from { transform: translateX(-110%); } to { transform: translateX(240%); } }
+@keyframes landing-intro-exit { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .landing-intro, .landing-intro * { animation: none !important; } }
 .landing-help { padding-top: 26px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 20px; font-size: 13px; color: var(--muted); }
 .landing-help a { display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-weight: 600; }
 .landing-help a:hover, .forgot-link:hover, .auth-footer a:hover { text-decoration: underline; }
@@ -287,13 +291,7 @@ h1, h2, h3 { color: var(--brand); }
   .institution-panel-caption strong { font-size: 32px; }
   .institution-panel-caption > span { font-size: 9px; }
   .institution-panel-index { top: 24px; left: 28px; font-size: 8px; }
-  .services-section { padding-top: 40px; }
-  .services-heading h2 { font-size: 26px; }
-  .service-grid { grid-template-columns: 1fr; margin-block: 22px; }
-  .service-item, .service-item:first-child, .service-item:last-child { border-left: 0; border-bottom: 1px solid var(--line); padding: 24px 0; }
-  .service-item:last-child { border-bottom: 0; }
-  .service-item h3 { margin-top: 16px; }
-  .landing-help { flex-direction: column; gap: 14px; }
+
   .footer-inner { align-items: start; }
   .footer-inner p { max-width: 185px; font-size: 10px; }
   .auth-section { width: calc(100% - 32px); grid-template-columns: 1fr; margin-block: 24px; }
