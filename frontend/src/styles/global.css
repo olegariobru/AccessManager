@@ -1,7 +1,9 @@
-/* SERVNET / ASJCOESP — identidade institucional.
-   Fontes locais do sistema: a interface não depende de serviços externos. */
+/* SERVNET / ASJCOESP — identidade institucional. */
 :root {
-  font-family: "Segoe UI", Arial, sans-serif;
+  --font-motivation: "Quicksand", sans-serif;
+  --font-victory: "Balgin", "Quicksand", sans-serif;
+  --font-triumph: "Montserrat", sans-serif;
+  font-family: var(--font-triumph);
   color: #243b49;
   background: #f4f5f3;
   font-synthesis: none;
@@ -26,6 +28,9 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px s
 input, select, textarea { color-scheme: light; }
 h1, h2, h3, p { overflow-wrap: break-word; }
 h1, h2, h3 { color: var(--brand); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-motivation); }
+h4, h5, h6, .eyebrow, .section-heading, .panel-heading, .dashboard-title > span { font-family: var(--font-victory); }
+p, span, small, label, button, input, select, textarea, a, li, td, th, strong, em { font-family: var(--font-triumph); }
 .container { width: min(1180px, calc(100% - 64px)); margin-inline: auto; }
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .main-content { flex: 1; }
@@ -47,7 +52,7 @@ h1, h2, h3 { color: var(--brand); }
 .hero { background: #f3f2ed; border-bottom: 1px solid var(--line); }
 .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 80px; padding-block: 74px; }
 .hero h1 { margin: 0; font-size: clamp(44px, 4.7vw, 66px); line-height: 1.08; font-weight: 650; letter-spacing: -2.3px; }
-.hero h1 em { color: var(--accent); font-family: Georgia, serif; font-weight: 400; }
+.hero h1 em { color: var(--accent); font-family: var(--font-motivation); font-weight: 500; }
 .hero-lead { max-width: 470px; margin: 26px 0 30px; color: #566772; font-size: 17px; line-height: 1.75; }
 .hero-copy > .button { min-width: 220px; justify-content: space-between; }
 .hero-note { display: flex; align-items: center; gap: 8px; margin: 18px 0 0; color: var(--muted); font-size: 12px; }
@@ -90,7 +95,7 @@ h1, h2, h3 { color: var(--brand); }
 .auth-institution .logo { color: white; }
 .auth-institution .logo-mark { background: #2b4c60; }
 .auth-institution .eyebrow { color: #d9b398; margin-bottom: 16px; }
-.auth-institution h2 { margin: 0; color: white; font-family: Georgia, serif; font-size: 38px; font-weight: 400; line-height: 1.2; letter-spacing: -.6px; }
+.auth-institution h2 { margin: 0; color: white; font-family: var(--font-motivation); font-size: 38px; font-weight: 500; line-height: 1.2; letter-spacing: -.6px; }
 .auth-institution p:not(.eyebrow) { margin: 20px 0 0; color: #c6d4dc; font-size: 14px; line-height: 1.85; }
 .auth-security { display: flex; align-items: center; gap: 9px; padding-top: 24px; border-top: 1px solid #436073; color: #cad7df; font-size: 12px; }
 .auth-card { min-width: 0; padding: 44px; }
