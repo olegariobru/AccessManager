@@ -77,19 +77,26 @@ test("permite ADMIN e bloqueia USER na rota administrativa", () => {
 test("permite apenas integrante do grupo RH na fila de marcação", () => {
   const rhRes = response();
   const otherGroupRes = response();
+  const coordinatorRes = response();
   let allowed = false;
   authorizeHumanResources(
-    { user: { role: "USER", isHr: true } },
+    { user: { role: "USER", isHrMember: true } },
     rhRes,
     () => { allowed = true; },
   );
   authorizeHumanResources(
-    { user: { role: "USER", isHr: false } },
+    { user: { role: "USER", isHrMember: false } },
     otherGroupRes,
+    () => assert.fail(),
+  );
+  authorizeHumanResources(
+    { user: { role: "USER", isHr: true, isHrMember: false } },
+    coordinatorRes,
     () => assert.fail(),
   );
   assert.equal(allowed, true);
   assert.equal(otherGroupRes.statusCode, 403);
+  assert.equal(coordinatorRes.statusCode, 403);
 });
 
 test("publicação de documentos exige vínculo com RH ou Contabilidade", () => {

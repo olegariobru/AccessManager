@@ -35,7 +35,7 @@ function toDocumentDto(document) {
   };
 }
 
-async function list({ userId, status, type } = {}) {
+async function list({ userId, status, type } = {}, pagination = { skip: 0, take: 50 }) {
   const documents = await prisma.clientDocument.findMany({
     where: {
       ...(userId ? { userId: Number(userId) } : {}),
@@ -44,6 +44,8 @@ async function list({ userId, status, type } = {}) {
     },
     include,
     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
   return documents.map(toDocumentDto);
 }

@@ -21,7 +21,7 @@ function toPayslipDto(payslip) {
   };
 }
 
-async function list({ userId, status, groupIds } = {}) {
+async function list({ userId, status, groupIds } = {}, pagination = { skip: 0, take: 50 }) {
   const where = {
     ...(userId ? { userId: Number(userId) } : {}),
     ...(status ? { status } : {}),
@@ -34,7 +34,9 @@ async function list({ userId, status, groupIds } = {}) {
   const items = await prisma.payslip.findMany({
     where,
     include,
-    orderBy: [{ year: "desc" }, { month: "desc" }],
+    orderBy: [{ year: "desc" }, { month: "desc" }, { id: "desc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
   return items.map(toPayslipDto);
 }

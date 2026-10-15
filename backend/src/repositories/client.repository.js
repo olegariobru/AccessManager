@@ -42,13 +42,15 @@ function toClientDto(profile, { includePersonalData = false } = {}) {
   return dto;
 }
 
-async function list({ includePersonalData = false } = {}) {
+async function list({ includePersonalData = false } = {}, pagination = { skip: 0, take: 50 }) {
   const profiles = await prisma.clientProfile.findMany({
     where: {
       user: { deletedAt: null, status: "ACTIVE" },
     },
     include: clientInclude,
     orderBy: [{ fullName: "asc" }, { id: "asc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
   return profiles.map((profile) => toClientDto(profile, { includePersonalData }));
 }

@@ -75,6 +75,7 @@ test("HTTP: cookie, CSRF, retirada do cadastro, revogação e troca obrigatória
   assert.match(initial.rawCookie, /HttpOnly/);
   assert.match(initial.rawCookie, /SameSite=Strict/);
   assert.equal(initial.headers.get("cache-control"), "no-store");
+  assert.match(initial.headers.get("content-security-policy"), /default-src 'self'/);
   const anonymousCookie = cookie;
   assert.equal(
     (
@@ -103,6 +104,10 @@ test("HTTP: cookie, CSRF, retirada do cadastro, revogação e troca obrigatória
   assert.notEqual(cookie, anonymousCookie);
   assert.equal(login.body.token, undefined);
   assert.equal(login.body.user.passwordHash, undefined);
+  assert.match(login.rawCookie, /HttpOnly/);
+  assert.equal(login.headers.get("cache-control"), "no-store");
+  assert.equal(login.body.csrfToken.length, 64);
+  assert.notEqual(login.body.csrfToken, cookie.split("=")[1]);
   const authenticatedCookie = cookie;
   assert.equal((await request("/auth/me")).status, 200);
   assert.equal((await request("/auth/users")).status, 403);

@@ -4,6 +4,7 @@ const passwordResetService = require("../services/password-reset.services");
 const { sendError } = require("../security/errors");
 const sessions = require("../security/session");
 const securityRepository = require("../repositories/security.repository");
+const { parsePagination, pageInfo } = require("../security/pagination");
 
 async function csrf(req, res, next) {
   try {
@@ -43,9 +44,11 @@ async function forgotPassword(req, res) {
   return res.status(200).json({ message });
 }
 
-async function listPasswordResetRequests(_req, res) {
+async function listPasswordResetRequests(req, res) {
   try {
-    return res.status(200).json({ requests: await passwordResetService.listPendingRequests() });
+    const pagination = parsePagination(req.query);
+    const requests = await passwordResetService.listPendingRequests(pagination);
+    return res.status(200).json({ requests, pageInfo: pageInfo(pagination, requests.length) });
   } catch (error) { return sendError(res, error, "Erro ao listar solicitações de senha"); }
 }
 
@@ -67,7 +70,9 @@ async function changePassword(req, res) {
 
 async function listUsers(req, res) {
   try {
-    return res.status(200).json({ users: await userService.listUsers(req.query.search) });
+    const pagination = parsePagination(req.query);
+    const users = await userService.listUsers(req.query.search, pagination);
+    return res.status(200).json({ users, pageInfo: pageInfo(pagination, users.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar usuários");
   }

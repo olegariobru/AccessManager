@@ -1,11 +1,13 @@
 const clientDocumentService = require("../services/client-document.services");
 
 const { sendError } = require("../security/errors");
+const { parsePagination, pageInfo } = require("../security/pagination");
 
 async function listOwn(req, res) {
   try {
-    const documents = await clientDocumentService.listOwnDocuments(req.user);
-    return res.status(200).json({ documents });
+    const pagination = parsePagination(req.query);
+    const documents = await clientDocumentService.listOwnDocuments(req.user, pagination);
+    return res.status(200).json({ documents, pageInfo: pageInfo(pagination, documents.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar documentos");
   }
@@ -13,8 +15,9 @@ async function listOwn(req, res) {
 
 async function listAll(req, res) {
   try {
-    const documents = await clientDocumentService.listAllDocuments(req.user);
-    return res.status(200).json({ documents });
+    const pagination = parsePagination(req.query);
+    const documents = await clientDocumentService.listAllDocuments(req.user, pagination);
+    return res.status(200).json({ documents, pageInfo: pageInfo(pagination, documents.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar documentos");
   }

@@ -99,12 +99,29 @@ test("administrador redefine senha com hash e conclui a solicitação", async (t
 
   await passwordResetService.resetPasswordByAdmin(
     { id: 1, role: "ADMIN" },
-    { userId: 7, requestId: "request-id", password: "Temporaria@123" },
+    { userId: 7, requestId: "4b48f49d-7c2b-4b8e-8daf-c5224201a23a", password: "Temporaria@123" },
   );
   assert.equal(payload.userId, 7);
-  assert.equal(payload.requestId, "request-id");
+  assert.equal(payload.requestId, "4b48f49d-7c2b-4b8e-8daf-c5224201a23a");
   assert.equal(payload.administratorId, 1);
   assert.notEqual(payload.passwordHash, "Temporaria@123");
+});
+
+test("redefinição administrativa exige ID de solicitação válido", async () => {
+  await assert.rejects(
+    () => passwordResetService.resetPasswordByAdmin(
+      { id: 1 },
+      { userId: 7, password: "Temporaria@123" },
+    ),
+    (error) => error.statusCode === 400 && error.code === "RESET_REQUEST_REQUIRED",
+  );
+  await assert.rejects(
+    () => passwordResetService.resetPasswordByAdmin(
+      { id: 1 },
+      { userId: 7, requestId: "request-id", password: "Temporaria@123" },
+    ),
+    (error) => error.statusCode === 400 && error.code === "RESET_REQUEST_REQUIRED",
+  );
 });
 
 test("redefinição administrativa rejeita senha temporária curta", async () => {

@@ -90,7 +90,7 @@ test("RH e administrador não marcam nem decidem as próprias férias", async (t
   });
   for (const user of [
     { id: 1, role: "ADMIN" },
-    { id: 1, role: "USER", isHr: true },
+    { id: 1, role: "USER", isHrMember: true },
   ]) {
     for (const fn of [
       requestService.markRequestByHr,
@@ -198,6 +198,57 @@ test("decisão concorrente exige status esperado e auditoria usa a mesma transa�
   assert.equal(auditTx, tx);
 });
 
+test("redefinição de senha só atualiza conta com solicitação pendente e não expirada", async (t) => {
+  const originalTransaction = prisma.$transaction;
+  const originalAudit = securityRepository.audit;
+  t.after(() => {
+    prisma.$transaction = originalTransaction;
+    securityRepository.audit = originalAudit;
+  });
+
+  const requestFilter = {
+    id: "4b48f49d-7c2b-4b8e-8daf-c5224201a23a",
+    userId: 7,
+    status: "PENDING",
+  };
+  let userUpdated = false;
+  let resetStatusUpdated = false;
+  const tx = {
+    user: {
+      findFirst: async () => ({ id: 7, name: "Teste", email: "teste@example.test" }),
+      update: async () => { userUpdated = true; },
+    },
+    passwordResetRequest: {
+      updateMany: async ({ where }) => {
+        if (where.id) {
+          assert.deepEqual(where, {
+            ...requestFilter,
+            expiresAt: { gt: where.expiresAt.gt },
+          });
+          assert.ok(where.expiresAt.gt instanceof Date);
+          return { count: 0 };
+        }
+        resetStatusUpdated = true;
+        return { count: 0 };
+      },
+    },
+  };
+  prisma.$transaction = async (operation) => operation(tx);
+  securityRepository.audit = async () => {};
+
+  await assert.rejects(
+    () => require("../src/repositories/password-reset.repository").resetPasswordByAdmin({
+      userId: 7,
+      requestId: requestFilter.id,
+      passwordHash: "new-hash",
+      administratorId: 1,
+    }),
+    (error) => error.statusCode === 409 && error.code === "RESET_REQUEST_INVALID",
+  );
+  assert.equal(userUpdated, false);
+  assert.equal(resetStatusUpdated, false);
+});
+
 test("senha e auditoria falham juntas quando o registro de auditoria falha", async (t) => {
   const originalTransaction = prisma.$transaction,
     originalAudit = securityRepository.audit;
@@ -236,7 +287,7 @@ test("senha e auditoria falham juntas quando o registro de auditoria falha", asy
   assert.equal(committed, false);
 });
 
-test("download detecta arquivo adulterado e rejeita link simbólico", async () => {
+test("download detecta arquivo adulterado e rejeita link simbólico", async (t) => {
   const pdf = await PDFDocument.create();
   pdf.addPage();
   const metadata = await privateFiles.storePdf(
@@ -253,7 +304,15 @@ test("download detecta arquivo adulterado e rejeita link simbólico", async () =
     (error) => error.code === "FILE_INTEGRITY_FAILED",
   );
   const link = require("node:crypto").randomUUID() + ".pdf";
-  await fs.symlink(target, require("node:path").join(storage, link));
+  try {
+    await fs.symlink(target, require("node:path").join(storage, link));
+  } catch (error) {
+    if (error.code === "EPERM") {
+      t.skip("O Windows deste ambiente não permite criar symlinks sem privilégio adicional");
+      return;
+    }
+    throw error;
+  }
   await assert.rejects(
     () => privateFiles.readPdf(link),
     (error) => error.code === "PRIVATE_FILE_NOT_FOUND",

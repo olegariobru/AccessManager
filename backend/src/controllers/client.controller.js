@@ -1,10 +1,13 @@
 const clientService = require("../services/client.services");
 
 const { sendError } = require("../security/errors");
+const { parsePagination, pageInfo } = require("../security/pagination");
 
 async function list(req, res) {
   try {
-    return res.status(200).json({ clients: await clientService.listClients(req.user) });
+    const pagination = parsePagination(req.query);
+    const clients = await clientService.listClients(req.user, pagination);
+    return res.status(200).json({ clients, pageInfo: pageInfo(pagination, clients.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar clientes");
   }
