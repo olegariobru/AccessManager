@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, LockKeyhole } from "lucide-react";
-import { Link } from "react-router-dom";
+import { LockKeyhole } from "lucide-react";
 
 export function Landing() {
   const [showIntro, setShowIntro] = useState(false);
@@ -29,7 +28,6 @@ export function Landing() {
             <p className="eyebrow">ASJCOESP · Portal de serviços</p>
             <h1>Mais próximo.<br />Mais simples.<br /><em>Todos os dias.</em></h1>
             <p className="hero-lead">O SERVNET conecta pessoas e serviços da associação. Suas solicitações, documentos e rotinas em um só lugar.</p>
-            <Link className="button button-primary" to="/login">Entrar no SERVNET <ArrowRight size={18} /></Link>
             <p className="hero-note"><LockKeyhole size={14} /> Acesso exclusivo com sua conta pessoal</p>
           </div>
           <aside className="institution-panel" aria-label="SERVNET, um espaço da ASJCOESP">

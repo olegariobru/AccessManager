@@ -140,7 +140,7 @@ async function getUserById(userId) {
   return user;
 }
 
-async function listUsers(search) {
+async function listUsers(search, pagination) {
   const normalizedSearch = String(search || "").trim();
   if (normalizedSearch.length > 100) {
     throw httpError(
@@ -149,7 +149,7 @@ async function listUsers(search) {
       "INVALID_SEARCH",
     );
   }
-  return userRepository.findAll(normalizedSearch);
+  return userRepository.findAll(normalizedSearch, pagination);
 }
 
 async function updateUser(userId, payload, actor) {

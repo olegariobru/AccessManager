@@ -17,7 +17,16 @@ test("usuário lista somente holerites publicados da própria conta", async (t) 
   assert.deepEqual(scope, { userId: 7, status: "PUBLISHED" });
 });
 
-test("RH e Contabilidade listam todos os holerites sem filtro obrigatório", async (t) => {
+test("coordenador não recebe salários ou rascunhos dos integrantes do grupo", async (t) => {
+  const original = payslipRepository.list;
+  t.after(() => { payslipRepository.list = original; });
+  let scope;
+  payslipRepository.list = async (value) => { scope = value; return []; };
+  await payslipService.listPayslips({ id: 7, role: "COORDINATOR", groupIds: [2, 3] });
+  assert.deepEqual(scope, { userId: 7, status: "PUBLISHED" });
+});
+
+test("RH e Contabilidade usam a rota explícita de holerites autorizados", async (t) => {
   const original = payslipRepository.list;
   t.after(() => { payslipRepository.list = original; });
   let receivedArguments = "not-called";
@@ -27,7 +36,7 @@ test("RH e Contabilidade listam todos os holerites sem filtro obrigatório", asy
   };
 
   await payslipService.listAllPayslips({ id: 3, isDocumentPublisher: true });
-  assert.deepEqual(receivedArguments, []);
+  assert.deepEqual(receivedArguments, [{}, undefined]);
 });
 
 test("repositório aceita listagem sem objeto de filtros", async (t) => {
@@ -39,6 +48,18 @@ test("repositório aceita listagem sem objeto de filtros", async (t) => {
   const payslips = await payslipRepository.list();
   assert.deepEqual(payslips, []);
   assert.deepEqual(query.where, {});
+  assert.equal(query.take, 50);
+  assert.equal(query.skip, 0);
+});
+
+test("repositório aplica paginação pedida dentro do teto", async (t) => {
+  const original = prisma.payslip.findMany;
+  t.after(() => { prisma.payslip.findMany = original; });
+  let query;
+  prisma.payslip.findMany = async (value) => { query = value; return []; };
+  await payslipRepository.list({}, { skip: 200, take: 100 });
+  assert.equal(query.skip, 200);
+  assert.equal(query.take, 100);
 });
 
 test("competência inválida é rejeitada antes de gravar", async () => {

@@ -1,6 +1,7 @@
 const requestService = require("../services/request.services");
 
 const { sendError } = require("../security/errors");
+const { parsePagination, pageInfo } = require("../security/pagination");
 
 async function create(req, res) {
   try {
@@ -12,7 +13,9 @@ async function create(req, res) {
 
 async function list(req, res) {
   try {
-    return res.status(200).json({ requests: await requestService.listRequests(req.user) });
+    const pagination = parsePagination(req.query);
+    const requests = await requestService.listRequests(req.user, pagination);
+    return res.status(200).json({ requests, pageInfo: pageInfo(pagination, requests.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar solicitações");
   }
@@ -20,13 +23,17 @@ async function list(req, res) {
 
 async function listOwn(req, res) {
   try {
-    return res.status(200).json({ requests: await requestService.listOwnRequests(req.user) });
+    const pagination = parsePagination(req.query);
+    const requests = await requestService.listOwnRequests(req.user, pagination);
+    return res.status(200).json({ requests, pageInfo: pageInfo(pagination, requests.length) });
   } catch (error) { return sendError(res, error, "Erro ao listar suas solicitações"); }
 }
 
 async function listHr(req, res) {
   try {
-    return res.status(200).json({ requests: await requestService.listHrRequests(req.user) });
+    const pagination = parsePagination(req.query);
+    const requests = await requestService.listHrRequests(req.user, pagination);
+    return res.status(200).json({ requests, pageInfo: pageInfo(pagination, requests.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar a fila do RH");
   }

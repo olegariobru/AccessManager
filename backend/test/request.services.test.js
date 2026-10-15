@@ -143,13 +143,13 @@ test("RH lista somente pedidos liberados e marca as férias", async (t) => {
     scope = params;
     return [];
   };
-  await requestService.listHrRequests({ id: 8, role: "USER", isHr: true });
+  await requestService.listHrRequests({ id: 8, role: "USER", isHrMember: true });
   assert.deepEqual(scope.statuses, ["PENDING_HR", "APPROVED", "REJECTED"]);
 
   requestRepository.findById = async () => ({ id: 10, status: "PENDING_HR" });
   requestRepository.markAsScheduled = async (payload) => ({ ...payload, status: "APPROVED" });
   const result = await requestService.markRequestByHr(
-    { id: 8, role: "USER", isHr: true },
+    { id: 8, role: "USER", isHrMember: true },
     10,
   );
   assert.equal(result.status, "APPROVED");
@@ -198,17 +198,29 @@ test("RH pode recusar férias com motivo e não pode recusar sem motivo", async 
 
   await assert.rejects(
     () => requestService.decideRequestByHr(
-      { id: 9, role: "USER", isHr: true }, 21, { status: "REJECTED" },
+      { id: 9, role: "USER", isHrMember: true }, 21, { status: "REJECTED" },
     ),
     (error) => error.statusCode === 400 && error.code === "REASON_REQUIRED",
   );
   const result = await requestService.decideRequestByHr(
-    { id: 9, role: "USER", isHr: true },
+    { id: 9, role: "USER", isHrMember: true },
     21,
     { status: "REJECTED", reason: "Período indisponível" },
   );
   assert.equal(result.status, "REJECTED");
   assert.equal(result.reason, "Período indisponível");
+});
+
+test("coordenar o grupo RH sem vínculo nele não concede permissão global de RH", async () => {
+  const coordinator = { id: 8, role: "COORDINATOR", isHr: true, isHrMember: false, groupIds: [7] };
+  await assert.rejects(
+    () => requestService.listHrRequests(coordinator),
+    (error) => error.statusCode === 403 && error.code === "HR_ACCESS_DENIED",
+  );
+  await assert.rejects(
+    () => requestService.markRequestByHr(coordinator, 12),
+    (error) => error.statusCode === 403 && error.code === "HR_ACCESS_DENIED",
+  );
 });
 
 test("usuário fora do RH não acessa nem conclui a fila do RH", async () => {

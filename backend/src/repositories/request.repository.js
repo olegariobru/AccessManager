@@ -88,7 +88,7 @@ async function findById(id) {
   return toRequestDto(request);
 }
 
-async function list({ userId, groupIds, statuses }) {
+async function list({ userId, groupIds, statuses }, pagination = { skip: 0, take: 50 }) {
   const where = {
     ...(userId ? { userId: Number(userId) } : {}),
     ...(groupIds ? { groupId: { in: groupIds.map(Number) } } : {}),
@@ -98,7 +98,9 @@ async function list({ userId, groupIds, statuses }) {
   const items = await prisma.vacationRequest.findMany({
     where,
     include: requestInclude,
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }, { id: "desc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
   return items.map(toRequestDto);
 }

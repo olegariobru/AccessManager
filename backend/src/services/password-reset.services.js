@@ -28,11 +28,18 @@ async function requestPasswordReset(email, requesterIp) {
   await passwordResetRepository.markNotificationSent(request.id);
 }
 
-async function listPendingRequests() {
-  return passwordResetRepository.listPending();
+async function listPendingRequests(pagination) {
+  return passwordResetRepository.listPending(pagination);
 }
 
 async function resetPasswordByAdmin(actor, payload = {}) {
+  const requestId = String(payload.requestId || "").trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+    const error = new Error("Solicitação de redefinição válida é obrigatória");
+    error.statusCode = 400;
+    error.code = "RESET_REQUEST_REQUIRED";
+    throw error;
+  }
   const password = String(payload.password || "");
   if (password.length < 12 || password.length > 128) {
     const error = new Error("A senha temporária deve ter entre 12 e 128 caracteres");
@@ -41,7 +48,7 @@ async function resetPasswordByAdmin(actor, payload = {}) {
   }
   const user = await passwordResetRepository.resetPasswordByAdmin({
     userId: payload.userId,
-    requestId: payload.requestId || null,
+    requestId,
     passwordHash: await hashPassword(password),
     administratorId: actor.id,
   });

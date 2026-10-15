@@ -110,14 +110,14 @@ function normalizeMetadata(payload = {}) {
   };
 }
 
-async function listOwnDocuments(actor) {
+async function listOwnDocuments(actor, pagination) {
   return clientDocumentRepository.list({
     userId: actor.id,
     status: "PUBLISHED",
-  });
+  }, pagination);
 }
 
-async function listAllDocuments(actor) {
+async function listAllDocuments(actor, pagination) {
   if (!actor?.isDocumentPublisher) {
     throw httpError(
       "Acesso exclusivo para integrantes do RH ou da Contabilidade",
@@ -127,6 +127,7 @@ async function listAllDocuments(actor) {
   }
   return clientDocumentRepository.list(
     actor.isAccounting ? {} : { type: "IRPF" },
+    pagination,
   );
 }
 

@@ -3,7 +3,7 @@ const requestRepository = require("../repositories/request.repository");
 const REVIEW_STATUSES = ["APPROVED", "REJECTED"];
 
 function isHumanResources(user) {
-  return Boolean(user?.isHr || user?.role === "ADMIN");
+  return Boolean(user?.isHrMember || user?.role === "ADMIN");
 }
 
 function httpError(message, statusCode, code) {
@@ -79,21 +79,21 @@ async function createRequest(user, payload = {}) {
   return request;
 }
 
-async function listRequests(user) {
+async function listRequests(user, pagination) {
   const scope =
     user.role === "ADMIN"
       ? {}
       : user.role === "COORDINATOR"
         ? { groupIds: user.groupIds }
         : { userId: user.id };
-  return requestRepository.list(scope);
+  return requestRepository.list(scope, pagination);
 }
 
-async function listOwnRequests(user) {
-  return requestRepository.list({ userId: user.id });
+async function listOwnRequests(user, pagination) {
+  return requestRepository.list({ userId: user.id }, pagination);
 }
 
-async function listHrRequests(user) {
+async function listHrRequests(user, pagination) {
   if (!isHumanResources(user)) {
     throw httpError(
       "Somente integrantes do RH podem acessar esta fila",
@@ -103,7 +103,7 @@ async function listHrRequests(user) {
   }
   return requestRepository.list({
     statuses: ["PENDING_HR", "APPROVED", "REJECTED"],
-  });
+  }, pagination);
 }
 
 async function reviewRequest(user, requestId, payload = {}) {
