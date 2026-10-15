@@ -64,8 +64,8 @@ function normalizeCreatePayload(payload = {}) {
   return data;
 }
 
-async function listClients(actor) {
-  return clientRepository.list({ includePersonalData: actor?.role === "ADMIN" });
+async function listClients(actor, pagination) {
+  return clientRepository.list({ includePersonalData: actor?.role === "ADMIN" }, pagination);
 }
 
 async function createClient(payload, actor) {

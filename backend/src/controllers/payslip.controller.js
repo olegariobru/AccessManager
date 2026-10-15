@@ -1,10 +1,13 @@
 const payslipService = require("../services/payslip.services");
 
 const { sendError } = require("../security/errors");
+const { parsePagination, pageInfo } = require("../security/pagination");
 
 async function list(req, res) {
   try {
-    return res.status(200).json({ payslips: await payslipService.listPayslips(req.user) });
+    const pagination = parsePagination(req.query);
+    const payslips = await payslipService.listPayslips(req.user, pagination);
+    return res.status(200).json({ payslips, pageInfo: pageInfo(pagination, payslips.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar holerites");
   }
@@ -12,13 +15,17 @@ async function list(req, res) {
 
 async function listOwn(req, res) {
   try {
-    return res.status(200).json({ payslips: await payslipService.listOwnPayslips(req.user) });
+    const pagination = parsePagination(req.query);
+    const payslips = await payslipService.listOwnPayslips(req.user, pagination);
+    return res.status(200).json({ payslips, pageInfo: pageInfo(pagination, payslips.length) });
   } catch (error) { return sendError(res, error, "Erro ao listar seus holerites"); }
 }
 
 async function listAll(req, res) {
   try {
-    return res.status(200).json({ payslips: await payslipService.listAllPayslips(req.user) });
+    const pagination = parsePagination(req.query);
+    const payslips = await payslipService.listAllPayslips(req.user, pagination);
+    return res.status(200).json({ payslips, pageInfo: pageInfo(pagination, payslips.length) });
   } catch (error) {
     return sendError(res, error, "Erro ao listar holerites");
   }

@@ -35,7 +35,7 @@ function authorizeRoles(...allowedRoles) {
 
 function authorizeHumanResources(req, res, next) {
   if (!req.user) return res.status(401).json({ error: "Usuário não autenticado" });
-  if (!req.user.isHr && req.user.role !== "ADMIN") {
+  if (!req.user.isHrMember && req.user.role !== "ADMIN") {
     return res.status(403).json({ error: "Acesso exclusivo para integrantes do RH" });
   }
   return next();

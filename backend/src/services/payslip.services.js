@@ -18,23 +18,19 @@ function assertDocumentPublisher(actor) {
   }
 }
 
-async function listPayslips(user) {
-  const scope =
-    user.role === "ADMIN"
-      ? {}
-      : user.role === "COORDINATOR"
-        ? { groupIds: user.groupIds }
-        : { userId: user.id, status: "PUBLISHED" };
-  return payslipRepository.list(scope);
+async function listPayslips(user, pagination) {
+  // Salary values are private to the employee and authorized document publishers.
+  // Coordinating a group does not grant access to its members' compensation.
+  return payslipRepository.list({ userId: user.id, status: "PUBLISHED" }, pagination);
 }
 
-async function listOwnPayslips(user) {
-  return payslipRepository.list({ userId: user.id, status: "PUBLISHED" });
+async function listOwnPayslips(user, pagination) {
+  return payslipRepository.list({ userId: user.id, status: "PUBLISHED" }, pagination);
 }
 
-async function listAllPayslips(actor) {
+async function listAllPayslips(actor, pagination) {
   assertDocumentPublisher(actor);
-  return payslipRepository.list();
+  return payslipRepository.list({}, pagination);
 }
 
 async function upsertPayslip(actor, payload = {}) {

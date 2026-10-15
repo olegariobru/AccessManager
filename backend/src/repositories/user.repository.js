@@ -45,8 +45,8 @@ function toPublicUser(user) {
   const { passwordHash: _passwordHash, roles: _roles, memberships: _memberships, coordinatedGroups, ...identity } = user;
   const managedGroups = (coordinatedGroups || []).filter(({ group }) => group?.isActive !== false);
   const isHrMember = isHumanResourcesGroup(membership?.group);
-  const isHr = isHrMember
-    || managedGroups.some(({ group }) => isHumanResourcesGroup(group));
+  const coordinatesHr = managedGroups.some(({ group }) => isHumanResourcesGroup(group));
+  const isHr = isHrMember;
   const isAccounting = isAccountingGroup(membership?.group);
 
   return {
@@ -58,6 +58,7 @@ function toPublicUser(user) {
     position: membership?.position || null,
     isHr,
     isHrMember,
+    coordinatesHr,
     isAccounting,
     isDocumentPublisher: isHrMember || isAccounting,
     groupIds: managedGroups.map(({ groupId }) => groupId),
@@ -163,7 +164,7 @@ async function createWithAccess({
   return transaction === prisma ? prisma.$transaction(operation) : operation(transaction);
 }
 
-async function findAll(search = "") {
+async function findAll(search = "", pagination = { skip: 0, take: 50 }) {
   const where = {
     deletedAt: null,
     status: "ACTIVE",
@@ -180,6 +181,8 @@ async function findAll(search = "") {
     where,
     include: accessInclude,
     orderBy: [{ name: "asc" }, { id: "asc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
   const publicUsers = rows.map(toPublicUser);
   const hasAdministrator = publicUsers.some(({ role }) => role === "ADMIN");

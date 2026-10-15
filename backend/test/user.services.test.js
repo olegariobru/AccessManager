@@ -92,7 +92,7 @@ test("login retorna usuário relacional sem credencial ao JavaScript", async (t)
   assert.equal(result.user.grupo, "TI");
 });
 
-test("coordenador do grupo RH recebe acesso à fila global do RH", () => {
+test("coordenador do grupo RH não recebe a permissão global de membro do RH", () => {
   const user = userRepository.toPublicUser({
     id: 8,
     name: "Coordenador RH",
@@ -109,8 +109,9 @@ test("coordenador do grupo RH recebe acesso à fila global do RH", () => {
   });
 
   assert.equal(user.role, "COORDINATOR");
-  assert.equal(user.isHr, true);
+  assert.equal(user.isHr, false);
   assert.equal(user.isHrMember, false);
+  assert.equal(user.coordinatesHr, true);
   assert.equal(user.isDocumentPublisher, false);
   assert.deepEqual(user.groupIds, [7]);
 });
@@ -221,4 +222,23 @@ test("repositório pesquisa usuários ativos por nome ou e-mail sem diferenciar 
     { name: { contains: "bruno", mode: "insensitive" } },
     { email: { contains: "bruno", mode: "insensitive" } },
   ]);
+});
+
+test("payloads de SQL injection sÃ£o tratados como texto literal na busca", async (t) => {
+  const original = prisma.user.findMany;
+  let query;
+  t.after(() => { prisma.user.findMany = original; });
+  prisma.user.findMany = async (options) => {
+    query = options;
+    return [];
+  };
+
+  const payload = "' OR 1=1 --";
+  await userRepository.findAll(payload);
+
+  assert.deepEqual(query.where.OR, [
+    { name: { contains: payload, mode: "insensitive" } },
+    { email: { contains: payload, mode: "insensitive" } },
+  ]);
+  assert.equal(query.take, 50);
 });

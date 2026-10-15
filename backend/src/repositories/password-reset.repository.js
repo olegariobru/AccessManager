@@ -32,34 +32,50 @@ function findActiveAdministrators() {
   });
 }
 
-function listPending() {
+function listPending(pagination = { skip: 0, take: 50 }) {
   return prisma.passwordResetRequest.findMany({
     where: { status: "PENDING", expiresAt: { gt: new Date() } },
     include: { user: { select: { id: true, name: true, email: true } } },
-    orderBy: { requestedAt: "desc" },
+    orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
+    skip: pagination.skip,
+    take: pagination.take,
   });
 }
 
 function resetPasswordByAdmin({ userId, requestId, passwordHash, administratorId }) {
   return prisma.$transaction(async (tx) => {
+    const completedAt = new Date();
     const user = await tx.user.findFirst({
       where: { id: Number(userId), status: "ACTIVE", deletedAt: null },
       select: { id: true, name: true, email: true },
     });
     if (!user) return null;
+    const claimedRequest = await tx.passwordResetRequest.updateMany({
+      where: {
+        id: requestId,
+        userId: user.id,
+        status: "PENDING",
+        expiresAt: { gt: completedAt },
+      },
+      data: {
+        status: "COMPLETED",
+        reviewedById: administratorId,
+        reviewedAt: completedAt,
+        completedAt,
+      },
+    });
+    if (claimedRequest.count !== 1) {
+      const error = new Error("Solicitação de redefinição inválida ou expirada");
+      error.statusCode = 409;
+      error.code = "RESET_REQUEST_INVALID";
+      throw error;
+    }
     await tx.user.update({
       where: { id: user.id },
       data: { passwordHash, mustChangePassword: true, tokenVersion: { increment: 1 } },
     });
-    const completedAt = new Date();
-    if (requestId) {
-      await tx.passwordResetRequest.updateMany({
-        where: { id: requestId, userId: user.id, status: "PENDING" },
-        data: { status: "COMPLETED", reviewedById: administratorId, reviewedAt: completedAt, completedAt },
-      });
-    }
     await tx.passwordResetRequest.updateMany({
-      where: { userId: user.id, status: "PENDING", ...(requestId ? { id: { not: requestId } } : {}) },
+      where: { userId: user.id, status: "PENDING" },
       data: { status: "REJECTED", reviewedById: administratorId, reviewedAt: completedAt },
     });
     await securityRepository.audit({
